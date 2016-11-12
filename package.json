@@ -1,0 +1,23 @@
+{
+  "name": "akun-api",
+  "version": "1.0.0",
+  "description": "A module intended to enable easy interactions with Anonkun",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Fiddlekins/akun-api.git"
+  },
+  "author": "Fiddlekins",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Fiddlekins/akun-api/issues"
+  },
+  "homepage": "https://github.com/Fiddlekins/akun-api#readme",
+  "dependencies": {
+    "qs": "^6.3.0",
+    "ws": "^1.1.1"
+  }
+}
