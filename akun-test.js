@@ -2,7 +2,7 @@
 // This file is intended for examples and testing
 
 const fs = require('fs');
-const Akun = require('./akun-api.js');
+const Akun = require('./index.js');
 
 let credentials = JSON.parse(fs.readFileSync('credentials.json'));
 
