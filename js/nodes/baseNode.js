@@ -55,7 +55,7 @@ class Node {
 	}
 
 	toString(){
-		return JSON.stringify(this._internal);
+		return `BaseNode: ${JSON.stringify(this._internal)}`;
 	}
 
 	static _mergeNodeData(currentNodeData, newNodeData){
@@ -74,6 +74,5 @@ class Node {
 		}
 	}
 }
-
 
 module.exports = Node;

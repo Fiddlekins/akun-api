@@ -38,7 +38,7 @@ class ReaderPostNode extends Node {
 	}
 
 	toString(){
-		return `ReaderPost: votes: ${this.votes}, dice: ${this.dice}`;
+		return `ReaderPost: (${this.id}) votes: ${this.votes}, dice: ${this.dice}`;
 	}
 }
 

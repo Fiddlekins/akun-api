@@ -14,12 +14,10 @@ let storyClient = akun.join(storyId);
 storyClient.then(client=>{
 
 	client.on('chat', chatNode=>{
-		console.log(`chat ${chatNode}`);
+		console.log(`${chatNode}`);
 		// console.log('historyChat', client.historyChat.slice());
 		if (chatNode.body === 'peng') {
-			console.log('Trying to post');
 			client.post('pung').then(response=>{
-				console.log(response)
 			}).catch(console.error);
 		}
 		if (chatNode.body === 'login') {
@@ -34,7 +32,7 @@ storyClient.then(client=>{
 		}
 	});
 	client.on('chapter', chapterNode=>{
-		console.log(`chapter ${chapterNode}`);
+		console.log(`${chapterNode}`);
 		// console.log('historyStory', client.historyStory.slice());
 		if (chapterNode.body === '<p>ping</p>') {
 			console.log('Trying to chapter');
@@ -44,11 +42,11 @@ storyClient.then(client=>{
 		}
 	});
 	client.on('choice', choiceNode=>{
-		console.log(`choice ${choiceNode}`);
+		console.log(`${choiceNode}`);
 		// console.log('historyStory', client.historyStory.slice());
 	});
 	client.on('readerPost', readerPostNode=>{
-		console.log(`readerPost ${readerPostNode}`);
+		console.log(`${readerPostNode}`);
 		// console.log('historyStory', client.historyStory.slice());
 	});
 	client.on('subscriptionSucceeded', data=>{

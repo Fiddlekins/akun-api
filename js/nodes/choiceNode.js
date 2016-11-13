@@ -84,7 +84,7 @@ class ChoiceNode extends Node {
 	}
 
 	toString(){
-		return `Choice: ${JSON.stringify(this._internal['choices'])}`;
+		return `Choice: (${this.id}) ${JSON.stringify(this._internal['choices'])}`;
 	}
 
 	_checkTally(){

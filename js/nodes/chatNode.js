@@ -8,7 +8,7 @@ class ChatNode extends Node {
 	}
 
 	toString(){
-		return `${this._userName} (${this._userId}): ${this.body}`;
+		return `Chat: ${this._userName} (${this._userId}): ${this.body}`;
 	}
 }
 

@@ -8,7 +8,7 @@ class ChapterNode extends Node {
 	}
 
 	toString(){
-		return `Chapter ${this.body.slice(0,500)}`;
+		return `Chapter: (${this.id}) ${this.body && this.body.slice(0, 500)}`;
 	}
 }
 
