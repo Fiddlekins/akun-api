@@ -36,8 +36,14 @@ class Akun {
 	join(id){
 		return new Promise((resolve, reject)=>{
 			this.getNode(id).then(response=>{
+				let data;
+				try {
+					data = JSON.parse(response);
+				} catch (err) {
+					reject(err);
+				}
 				let client;
-				if (response['nt'] === 'story') {
+				if (data['nt'] === 'story') {
 					client = new StoryClient(this, id);
 				} else {
 					client = new ChatClient(this, id);

@@ -2,6 +2,10 @@
 
 const events = require('events');
 const History = require('./history.js');
+const ChatNode = require('./nodes/chatNode.js');
+const ChapterNode = require('./nodes/chapterNode.js');
+const ChoiceNode = require('./nodes/choiceNode.js');
+const ReaderPostNode = require('./nodes/readerPostNode.js');
 
 class ChatClient extends events.EventEmitter {
 	constructor(akun, id){
@@ -47,27 +51,44 @@ class ChatClient extends events.EventEmitter {
 
 	reply(body, replyId){
 		let replyObject;
-		let message = this._historyChat.get(replyId);
+		let replyNode = this._historyChat.get(replyId);
 		// TODO if not found in own chat make a get request to grab the message data from akun
-		if (message) {
+		if (replyNode) {
 			replyObject = {};
-			replyObject['_id'] = message['_id'];
-			replyObject['b'] = message['b'];
-			replyObject['hide'] = message['hide'];
+			replyObject['_id'] = replyNode.data['_id'];
+			replyObject['b'] = replyNode.data['b'];
+			replyObject['hide'] = replyNode.data['hide'];
 		}
 		return this._post(body, replyObject);
 	}
 
 	_onMessage(data){
-		let eventType = data['nt'];
-		this.emit(eventType, data);
+		let nodeType = data['nt'];
+		let payload;
+		switch (nodeType) {
+			case 'chat':
+				payload = new ChatNode(data);
+				break;
+			case 'chapter':
+				payload = new ChapterNode(data);
+				break;
+			case 'choice':
+				payload = new ChoiceNode(data);
+				break;
+			case 'readerPost':
+				payload = new ReaderPostNode(data);
+				break;
+			default:
+				payload = data;
+		}
+		this.emit(nodeType, payload);
 	}
 
-	_onChat(data){
-		if (this._historyChat.has(data)) {
-			this._historyChat.update(data);
+	_onChat(node){
+		if (this._historyChat.has(node)) {
+			this._historyChat.update(node);
 		} else {
-			this._historyChat.add(data);
+			this._historyChat.add(node);
 		}
 	}
 
@@ -86,12 +107,14 @@ class ChatClient extends events.EventEmitter {
 }
 
 class StoryClient extends ChatClient {
-	constructor(id){
-		super(id);
+	constructor(akun, id){
+		super(akun, id);
 		this._nameStory = `anonkun-chapters-${id}`;
 		this._historyStory = new History();
 
 		this.on('chapter', this._onChapter);
+		this.on('choice', this._onChoice);
+		this.on('readerPost', this._onReaderPost);
 	}
 
 	get nameStory(){
@@ -105,22 +128,38 @@ class StoryClient extends ChatClient {
 	post(body){
 		let replyObject;
 		if (this._historyStory.size) {
-			let message = this._historyStory.last();
-			if (message) {
+			let replyNode = this._historyStory.last();
+			if (replyNode) {
 				replyObject = {};
-				replyObject['_id'] = message['_id'];
-				replyObject['b'] = message['b'];
+				replyObject['_id'] = replyNode.data['_id'];
+				replyObject['b'] = replyNode.data['b'];
 				replyObject['hide'] = true;
 			}
 		}
 		return this._post(body, replyObject);
 	}
 
-	_onChapter(data){
-		if (this._historyStory.has(data)) {
-			this._historyStory.update(data);
+	_onChapter(node){
+		if (this._historyStory.has(node)) {
+			this._historyStory.update(node);
 		} else {
-			this._historyStory.add(data);
+			this._historyStory.add(node);
+		}
+	}
+
+	_onChoice(node){
+		if (this._historyStory.has(node)) {
+			this._historyStory.update(node);
+		} else {
+			this._historyStory.add(node);
+		}
+	}
+
+	_onReaderPost(node){
+		if (this._historyStory.has(node)) {
+			this._historyStory.update(node);
+		} else {
+			this._historyStory.add(node);
 		}
 	}
 }

@@ -15,12 +15,12 @@ class History {
 	}
 
 	has(idOrNode){
-		let id = typeof idOrNode === 'object' ? History._getId(idOrNode) : idOrNode;
+		let id = typeof idOrNode === 'object' ? idOrNode.id : idOrNode;
 		return this._content.has(id);
 	}
 
 	get(idOrNode){
-		let id = typeof idOrNode === 'object' ? History._getId(idOrNode) : idOrNode;
+		let id = typeof idOrNode === 'object' ? idOrNode.id : idOrNode;
 		return this._content.get(id);
 	}
 
@@ -39,43 +39,24 @@ class History {
 
 	slice(begin, end){
 		return this.sliceId(begin, end).map(id=>{
-			return this._content.get(id)
+			return this._content.get(id);
 		});
 	}
 
 	add(node){
-		let id = History._getId(node);
+		let id = node.id;
 		this._order.push(id);
 		this._content.set(id, node);
 		this._cull();
 	}
 
 	update(node){
-		let id = History._getId(node);
-		if (node['updateProperties']) {
-			History._mergeNodes(this._content.get(id), node);
+		let id = node.id;
+		let nodeData = node.data;
+		if (nodeData['updateProperties']) {
+			this._content.get(id).merge(nodeData);
 		} else {
-			this._content.set(id, node);
-		}
-	}
-
-	static _getId(node){
-		return node['_id'];
-	}
-
-	static _mergeNodes(currentNode, newNode){
-		for (let prop in newNode) {
-			if (prop !== 'updateProperties' && newNode.hasOwnProperty(prop)) {
-				if (typeof newNode[prop] === 'object' && !Array.isArray(newNode[prop])) {
-					if (typeof currentNode[prop] === 'object') {
-						History._mergeNodes(currentNode[prop], newNode[prop]);
-					} else {
-						currentNode[prop] = newNode[prop];
-					}
-				} else {
-					currentNode[prop] = newNode[prop];
-				}
-			}
+			this._content.get(id).replace(nodeData);
 		}
 	}
 
