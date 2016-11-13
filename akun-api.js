@@ -40,6 +40,7 @@ let storyId = 'vhHhMfskRnNDbxwzo';
 let story = new StoryClient(storyId);
 story.on('chat', data=>{
 	console.log('chat', data);
+	console.log('historyChat', story.historyChat.slice());
 	if (data['b'] === 'peng') {
 		console.log('Trying to post');
 		story.post('pung').then(response=>{
@@ -49,6 +50,7 @@ story.on('chat', data=>{
 });
 story.on('chapter', data=>{
 	console.log('chapter', data);
+	console.log('historyStory', story.historyStory.slice());
 	if (data['b'] === 'ping') {
 		console.log('Trying to chapter');
 		story.post('chapong').then(response=>{
