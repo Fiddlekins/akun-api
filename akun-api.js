@@ -1,64 +1,56 @@
 'use strict';
 
-// const Dice = require('./dice.js');
 const Core = require('./js/core.js');
-
-const HOSTNAME = 'anonkun.com';
-const COOKIE = '__cfduid=d95fdab71be8cd3017fe3d6796bfed6931473093587; ' +
-	'ajs_group_id=null; ' +
-	'ajs_anonymous_id=%222cced225-0eea-4026-b2ad-d6ff046b4d51%22; ' +
-	'loginToken=%7B%22loginToken%22%3A%22qTANYN89zyFKvyEQf%22%2C%22userId%22%3A%22C8x2fwWvtRvr4CyFm%22%7D; ' +
-	'ajs_user_id=%22C8x2fwWvtRvr4CyFm%22';
-
-Core.hostname = HOSTNAME;
-Core.cookie = COOKIE;
-
+const PusherConnection = require('./js/pusherConnection.js');
 const ChatClient = require('./js/client.js').ChatClient;
 const StoryClient = require('./js/client.js').StoryClient;
 
+// const Dice = require('./dice.js');
+
 class Akun {
-// will fill in later
+	constructor(){
+		this.core = new Core();
+		this.connection = new PusherConnection(this);
+		this.clients = new Map();
+	}
+
+	login(username, password, shouldRefresh){
+		return new Promise((resolve, reject)=>{
+			this.core.login(username, password).then(response=>{
+				if (shouldRefresh) {
+					this.refreshConnection();
+				}
+				resolve(response);
+			}).catch(reject);
+		});
+	}
+
+	refreshConnection(){
+		this.connection.destroy();
+		this.connection = new PusherConnection(this);
+		for (let client of this.clients.values()) {
+			client.refreshConnection();
+		}
+	}
+
+	join(id){
+		return new Promise((resolve, reject)=>{
+			this.getNode(id).then(response=>{
+				let client;
+				if (response['nt'] === 'story') {
+					client = new StoryClient(this, id);
+				} else {
+					client = new ChatClient(this, id);
+				}
+				this.clients.set(id, client);
+				resolve(client);
+			}).catch(reject);
+		});
+	}
+
+	getNode(id){
+		return this.core.get(`api/node/${id}`);
+	}
 }
 
 module.exports = Akun;
-
-let storyId = 'vhHhMfskRnNDbxwzo';
-
-// let client = new ChatClient(storyId);
-// client.on('chat', data=>{
-// 	console.log('chat', data);
-// 	if (data['b'] === 'ping'){
-// 		client.post('pong');
-// 	}
-// });
-// client.on('subscriptionSucceeded', data=>{
-// 	console.log('subscriptionSucceeded', data);
-// });
-
-// Shitty test code
-
-let story = new StoryClient(storyId);
-story.on('chat', data=>{
-	console.log('chat', data);
-	console.log('historyChat', story.historyChat.slice());
-	if (data['b'] === 'peng') {
-		console.log('Trying to post');
-		story.post('pung').then(response=>{
-			console.log(response)
-		}).catch(console.error);
-	}
-});
-story.on('chapter', data=>{
-	console.log('chapter', data);
-	console.log('historyStory', story.historyStory.slice());
-	if (data['b'] === 'ping') {
-		console.log('Trying to chapter');
-		story.post('chapong').then(response=>{
-			console.log(response)
-		}).catch(console.error);
-	}
-});
-story.on('subscriptionSucceeded', data=>{
-	console.log('subscriptionSucceeded', data);
-});
-

@@ -3,44 +3,130 @@
 const http = require('http');
 const qs = require('qs');
 
-class Core {
-
-	static get(path){
-		let options = {
-			hostname: Core.hostname,
-			path: Core._validatePath(path),
-			method: 'GET',
-			headers: {
-				'Cookie': Core.cookie
-			}
-		};
-		return Core._request(options);
+class Cookie {
+	constructor(){
+		this._values = new Map();
+		this._string = '';
+		this._ignoredKeys = new Set(['expires', 'domain', 'path']);
 	}
 
-	static post(path, postData){
+	serialize(){
+		return this._string;
+	}
+
+	set(key, value){
+		this._values.set(key, value);
+		this._serialize();
+	}
+
+	add(cookieString){
+		let pairs = cookieString.split(/; */);
+		let obj = {};
+
+		for (let pair of pairs) {
+			let splitIndex = pair.indexOf('=');
+			if (splitIndex < 0) {
+				continue;
+			}
+			let key = pair.slice(0, splitIndex);
+			let value = pair.slice(splitIndex + 1).trim(); // Final value might have trailing whitespace
+			obj[Cookie._decode(key)] = Cookie._decode(value);
+		}
+
+		for (let key in obj) {
+			if (obj.hasOwnProperty(key) && !this._ignoredKeys.has(key)) {
+				this._values.set(key, obj[key]);
+			}
+		}
+
+		this._serialize();
+	}
+
+	_serialize(){
+		let pairStrings = [];
+		for (let [key, value] of this._values) {
+			pairStrings.push(Cookie._encode(key) + '=' + Cookie._encode(value));
+		}
+		this._string = pairStrings.join('; ');
+	}
+
+	static _encode(value){
+		if (value === undefined) {
+			value = '';
+		}
+		return encodeURIComponent(value);
+	}
+
+	static _decode(value){
+		if (value === undefined) {
+			value = '';
+		}
+		return decodeURIComponent(value);
+	}
+}
+
+class Core {
+	constructor(){
+		this._hostname = 'anonkun.com';
+		this._cookie = new Cookie();
+		this._user = null;
+	}
+
+	get hostname(){
+		return this._hostname;
+	}
+
+	get user(){
+		return this._user;
+	}
+
+	login(username, password){
+		return new Promise((resolve, reject)=>{
+			this.post('api/login', {
+				'user': username,
+				'password': password
+			}).then(response=>{
+				let data = JSON.parse(response);
+				if (data['err']) {
+					reject(new Error(data['err']));
+				} else {
+					this._user = data;
+					this._cookie.set('ajs_user_id', `"${data['_id']}"`);
+					this._cookie.set('loginToken', JSON.stringify({
+						'loginToken': data['token'],
+						'userId': data['_id']
+					}));
+					resolve(data);
+				}
+			}).catch(reject);
+		});
+	}
+
+	get(path){
+		let options = {
+			hostname: this._hostname,
+			path: Core._validatePath(path),
+			method: 'GET'
+		};
+		return this._request(options);
+	}
+
+	post(path, postData){
 		let postDataString = Core._encodeURLFormData(postData);
 		let options = {
-			hostname: Core.hostname,
+			hostname: this._hostname,
 			path: Core._validatePath(path),
 			method: 'POST',
 			headers: {
-				'Cookie': Core.cookie,
 				'Content-Type': 'application/x-www-form-urlencoded',
 				'Content-Length': Buffer.byteLength(postDataString)
 			}
 		};
-		return Core._request(options, postDataString);
+		return this._request(options, postDataString);
 	}
 
-	static _validatePath(path){
-		if (path.charAt(0) !== '/') {
-			return '/' + path;
-		} else {
-			return path;
-		}
-	}
-
-	static _request(options, postDataString){
+	_request(options, postDataString){
+		this._addCookie(options);
 		return new Promise((resolve, reject)=>{
 			let request = http.request(options, response=>{
 				var str = '';
@@ -50,6 +136,11 @@ class Core {
 				});
 
 				response.on('end', ()=>{
+					if (response.headers['set-cookie']) {
+						response.headers['set-cookie'].forEach(cookie=>{
+							this._cookie.add(cookie)
+						});
+					}
 					resolve(str);
 				});
 			});
@@ -62,12 +153,26 @@ class Core {
 		});
 	}
 
+	_addCookie(options){
+		let cookie = this._cookie.serialize();
+		if (cookie.length) {
+			console.log(`Using cookie: ${cookie}`);
+			options.headers = options.headers || {};
+			options.headers['Cookie'] = cookie;
+		}
+	}
+
+	static _validatePath(path){
+		if (path.charAt(0) !== '/') {
+			return '/' + path;
+		} else {
+			return path;
+		}
+	}
+
 	static _encodeURLFormData(input){
 		return qs.stringify(input, {arrayFormat: 'brackets'});
 	}
 }
-
-Core.hostname = '';
-Core.cookie = '';
 
 module.exports = Core;

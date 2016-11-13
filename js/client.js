@@ -1,29 +1,28 @@
 'use strict';
 
 const events = require('events');
-const Core = require('./core.js');
-const connection = require('./pusherConnection.js');
 const History = require('./history.js');
 
 class ChatClient extends events.EventEmitter {
-	constructor(id){
+	constructor(akun, id){
 		super();
+		this._akun = akun;
 		this._id = id;
 		this._nameChat = `presence-chat-${id}-latest`;
-		this._connection = connection;
 		this._historyChat = new History();
 
 		this.on('message', this._onMessage);
 		this.on('chat', this._onChat);
 
 		setImmediate(()=>{
-			this._connection.addClient(this);
+			this._akun.connection.addClient(this);
 		}, this);
 	}
 
 	destroy(){
-		this._connection.removeClient(this);
-		this._connection = null;
+		this._akun.connection.removeClient(this);
+		this._akun.clients.delete(this._id);
+		this._akun = null;
 	}
 
 	get id(){
@@ -36,6 +35,10 @@ class ChatClient extends events.EventEmitter {
 
 	get historyChat(){
 		return this._historyChat;
+	}
+
+	refreshConnection(){
+		this._akun.connection.addClient(this);
 	}
 
 	post(body){
@@ -78,7 +81,7 @@ class ChatClient extends events.EventEmitter {
 			postData['r'].push(replyObject['_id']);
 			postData['ra'] = replyObject;
 		}
-		return Core.post('api/node', postData);
+		return this._akun.core.post('api/node', postData);
 	}
 }
 

@@ -1,10 +1,10 @@
 'use strict';
 
 const WebSocket = require('ws');
-const Core = require('./core.js');
 
 class PusherConnection {
-	constructor(){
+	constructor(akun){
+		this._akun = akun;
 		this._active = false;
 		this._clients = {};
 		this._pusherId = 'undefined';
@@ -13,12 +13,21 @@ class PusherConnection {
 		this._boundSendHeartbeat = this._sendHeartbeat.bind(this);
 		this._channelNameToClientIdMap = new Map();
 
-		Core.get('').then(response=>{
+		this._akun.core.get('').then(response=>{
 			this._pusherId = /"pusher":"([0-9A-z]+)"/.exec(response)[1];
 			this._ws = new WebSocket(`wss://ws.pusherapp.com/app/${this._pusherId}?protocol=7&client=js&version=2.2.0&flash=false`);
 			this._ws.on('open', this._onOpen.bind(this));
+			this._ws.on('close', this._onClose.bind(this));
+			this._ws.on('error', this._onError.bind(this));
 			this._ws.on('message', this._onMessage.bind(this));
 		}).catch(console.error);
+	}
+
+	destroy(){
+		this._clearHeartbeat();
+		this._active = false;
+		this._ws.close();
+		this._akun = null;
 	}
 
 	get active(){
@@ -37,8 +46,15 @@ class PusherConnection {
 	}
 
 	_onOpen(){
-		this._active = true;
-		console.log('Pusher connection opened!');
+		console.log(`Pusher Connection opened!`);
+	}
+
+	_onClose(){
+		console.log(`Pusher Connection closed.`);
+	}
+
+	_onError(err){
+		console.error(`Pusher Connection experienced an error: ${err}`);
 	}
 
 	_onMessage(rawMessage){
@@ -52,13 +68,13 @@ class PusherConnection {
 				this._onSubscriptionSucceeded(message);
 				break;
 			case 'pusher:pong':
-				console.log('Pong');
+				console.log(`Pusher Connection received Pong.`);
 				break;
 			case 'childChanged':
 				this._onChildChanged(message);
 				break;
 			default:
-				console.log('Unrecognised message:', message);
+				console.log(`Pusher Connection received an unrecognised message: ${message}`);
 		}
 
 		this._resetHeartbeat();
@@ -93,7 +109,7 @@ class PusherConnection {
 
 	_send(data){
 		let dataString = JSON.stringify(data);
-		console.log('Sent:', dataString);
+		console.log(`Pusher Connection sent message: ${dataString}`);
 		this._ws.send(dataString);
 	}
 
@@ -105,10 +121,14 @@ class PusherConnection {
 	}
 
 	_resetHeartbeat(){
+		this._clearHeartbeat();
+		this._heartbeatTimeout = setTimeout(this._boundSendHeartbeat, this._activity_timeout);
+	}
+
+	_clearHeartbeat(){
 		if (this._heartbeatTimeout) {
 			clearTimeout(this._heartbeatTimeout);
 		}
-		this._heartbeatTimeout = setTimeout(this._boundSendHeartbeat, this._activity_timeout);
 	}
 
 	_subscribeClient(client){
@@ -124,7 +144,7 @@ class PusherConnection {
 	}
 
 	_subscribe(channelName){
-		Core.post('pusher/auth', {
+		this._akun.core.post('pusher/auth', {
 			'socket_id': this._socket_id,
 			'channel_name': channelName
 		}).then(response=>{
@@ -141,4 +161,4 @@ class PusherConnection {
 	}
 }
 
-module.exports = new PusherConnection();
+module.exports = PusherConnection;
