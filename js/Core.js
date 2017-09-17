@@ -101,6 +101,9 @@ class Core {
 	}
 
 	async api(path, postData) {
+		if (path.charAt(0) === '/') {
+			path = path.slice(1);
+		}
 		let response;
 		if (postData) {
 			response = await this.post(`api/${path}`, postData);
