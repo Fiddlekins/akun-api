@@ -8,15 +8,15 @@ const StoryClient = require('./client.js').StoryClient;
 // const Dice = require('./dice.js');
 
 class Akun {
-	constructor(){
-		this.core = new Core();
+	constructor(settings) {
+		this.core = new Core({ hostname: settings.hostname });
 		this.connection = new PusherConnection(this);
 		this.clients = new Map();
 	}
 
-	login(username, password, shouldRefresh){
-		return new Promise((resolve, reject)=>{
-			this.core.login(username, password).then(response=>{
+	login(username, password, shouldRefresh) {
+		return new Promise((resolve, reject) => {
+			this.core.login(username, password).then(response => {
 				if (shouldRefresh) {
 					this.refreshConnection();
 				}
@@ -25,7 +25,7 @@ class Akun {
 		});
 	}
 
-	refreshConnection(){
+	refreshConnection() {
 		this.connection.destroy();
 		this.connection = new PusherConnection(this);
 		for (let client of this.clients.values()) {
@@ -33,9 +33,9 @@ class Akun {
 		}
 	}
 
-	join(id){
-		return new Promise((resolve, reject)=>{
-			this.getNode(id).then(response=>{
+	join(id) {
+		return new Promise((resolve, reject) => {
+			this.getNode(id).then(response => {
 				let data;
 				try {
 					data = JSON.parse(response);
@@ -54,7 +54,7 @@ class Akun {
 		});
 	}
 
-	getNode(id){
+	getNode(id) {
 		return this.core.get(`api/node/${id}`);
 	}
 }

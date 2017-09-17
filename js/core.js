@@ -4,22 +4,22 @@ const http = require('http');
 const qs = require('qs');
 
 class Cookie {
-	constructor(){
+	constructor() {
 		this._values = new Map();
 		this._string = '';
 		this._ignoredKeys = new Set(['expires', 'domain', 'path']);
 	}
 
-	serialize(){
+	serialize() {
 		return this._string;
 	}
 
-	set(key, value){
+	set(key, value) {
 		this._values.set(key, value);
 		this._serialize();
 	}
 
-	add(cookieString){
+	add(cookieString) {
 		let pairs = cookieString.split(/; */);
 		let obj = {};
 
@@ -42,7 +42,7 @@ class Cookie {
 		this._serialize();
 	}
 
-	_serialize(){
+	_serialize() {
 		let pairStrings = [];
 		for (let [key, value] of this._values) {
 			pairStrings.push(Cookie._encode(key) + '=' + Cookie._encode(value));
@@ -50,14 +50,14 @@ class Cookie {
 		this._string = pairStrings.join('; ');
 	}
 
-	static _encode(value){
+	static _encode(value) {
 		if (value === undefined) {
 			value = '';
 		}
 		return encodeURIComponent(value);
 	}
 
-	static _decode(value){
+	static _decode(value) {
 		if (value === undefined) {
 			value = '';
 		}
@@ -66,26 +66,26 @@ class Cookie {
 }
 
 class Core {
-	constructor(){
-		this._hostname = 'anonkun.com';
+	constructor({ hostname }) {
+		this._hostname = hostname;
 		this._cookie = new Cookie();
 		this._user = null;
 	}
 
-	get hostname(){
+	get hostname() {
 		return this._hostname;
 	}
 
-	get user(){
+	get user() {
 		return this._user;
 	}
 
-	login(username, password){
-		return new Promise((resolve, reject)=>{
+	login(username, password) {
+		return new Promise((resolve, reject) => {
 			this.post('api/login', {
 				'user': username,
 				'password': password
-			}).then(response=>{
+			}).then(response => {
 				let data = JSON.parse(response);
 				if (data['err']) {
 					reject(new Error(data['err']));
@@ -102,7 +102,7 @@ class Core {
 		});
 	}
 
-	get(path){
+	get(path) {
 		let options = {
 			hostname: this._hostname,
 			path: Core._validatePath(path),
@@ -111,7 +111,7 @@ class Core {
 		return this._request(options);
 	}
 
-	post(path, postData){
+	post(path, postData) {
 		let postDataString = Core._encodeURLFormData(postData);
 		let options = {
 			hostname: this._hostname,
@@ -125,19 +125,19 @@ class Core {
 		return this._request(options, postDataString);
 	}
 
-	_request(options, postDataString){
+	_request(options, postDataString) {
 		this._addCookie(options);
-		return new Promise((resolve, reject)=>{
-			let request = http.request(options, response=>{
-				var str = '';
+		return new Promise((resolve, reject) => {
+			let request = http.request(options, response => {
+				let str = '';
 
-				response.on('data', chunk=>{
+				response.on('data', chunk => {
 					str += chunk;
 				});
 
-				response.on('end', ()=>{
+				response.on('end', () => {
 					if (response.headers['set-cookie']) {
-						response.headers['set-cookie'].forEach(cookie=>{
+						response.headers['set-cookie'].forEach(cookie => {
 							this._cookie.add(cookie)
 						});
 					}
@@ -145,7 +145,7 @@ class Core {
 				});
 			});
 
-			request.on('error', err=>reject);
+			request.on('error', err => reject);
 			if (postDataString) {
 				request.write(postDataString);
 			}
@@ -153,7 +153,7 @@ class Core {
 		});
 	}
 
-	_addCookie(options){
+	_addCookie(options) {
 		let cookie = this._cookie.serialize();
 		if (cookie.length) {
 			console.log(`Using cookie: ${cookie}`);
@@ -162,7 +162,7 @@ class Core {
 		}
 	}
 
-	static _validatePath(path){
+	static _validatePath(path) {
 		if (path.charAt(0) !== '/') {
 			return '/' + path;
 		} else {
@@ -170,8 +170,8 @@ class Core {
 		}
 	}
 
-	static _encodeURLFormData(input){
-		return qs.stringify(input, {arrayFormat: 'brackets'});
+	static _encodeURLFormData(input) {
+		return qs.stringify(input, { arrayFormat: 'brackets' });
 	}
 }
 
