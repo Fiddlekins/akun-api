@@ -100,6 +100,16 @@ class Core {
 		});
 	}
 
+	async api(path, postData) {
+		let response;
+		if (postData) {
+			response = await this.post(`api/${path}`, postData);
+		} else {
+			response = await this.get(`api/${path}`);
+		}
+		return JSON.parse(response);
+	}
+
 	get(path) {
 		let options = {
 			hostname: this._hostname,

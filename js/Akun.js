@@ -33,8 +33,7 @@ class Akun {
 	}
 
 	join(id) {
-		return this.getNode(id).then(response => {
-			const data = JSON.parse(response);
+		return this.getNode(id).then(data => {
 			let client;
 			if (data['nt'] === 'story') {
 				client = new StoryClient(this, id);
@@ -47,8 +46,12 @@ class Akun {
 		});
 	}
 
+	api(path, postData) {
+		return this.core.api(path, postData);
+	}
+
 	getNode(id) {
-		return this.core.get(`api/node/${id}`);
+		return this.core.api(`node/${id}`);
 	}
 }
 
