@@ -41,8 +41,12 @@ class ChatClient extends events.EventEmitter {
 		return this._historyChat;
 	}
 
+	connect(){
+		return this._akun.connection.addClient(this);
+	}
+
 	refreshConnection(){
-		this._akun.connection.addClient(this);
+		return this.connect();
 	}
 
 	post(body){

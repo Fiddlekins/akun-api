@@ -1,6 +1,6 @@
 'use strict';
 
-const http = require('http');
+const https = require('https');
 const qs = require('qs');
 
 class Cookie {
@@ -81,24 +81,22 @@ class Core {
 	}
 
 	login(username, password) {
-		return new Promise((resolve, reject) => {
-			this.post('api/login', {
-				'user': username,
-				'password': password
-			}).then(response => {
-				let data = JSON.parse(response);
-				if (data['err']) {
-					reject(new Error(data['err']));
-				} else {
-					this._user = data;
-					this._cookie.set('ajs_user_id', `"${data['_id']}"`);
-					this._cookie.set('loginToken', JSON.stringify({
-						'loginToken': data['token'],
-						'userId': data['_id']
-					}));
-					resolve(data);
-				}
-			}).catch(reject);
+		return this.post('api/login', {
+			'user': username,
+			'password': password
+		}).then(response => {
+			let data = JSON.parse(response);
+			if (data['err']) {
+				throw new Error(data['err']);
+			} else {
+				this._user = data;
+				this._cookie.set('ajs_user_id', `"${data['_id']}"`);
+				this._cookie.set('loginToken', JSON.stringify({
+					'loginToken': data['token'],
+					'userId': data['_id']
+				}));
+				return data;
+			}
 		});
 	}
 
@@ -128,7 +126,7 @@ class Core {
 	_request(options, postDataString) {
 		this._addCookie(options);
 		return new Promise((resolve, reject) => {
-			let request = http.request(options, response => {
+			let request = https.request(options, response => {
 				let str = '';
 
 				response.on('data', chunk => {
@@ -146,6 +144,7 @@ class Core {
 			});
 
 			request.on('error', err => reject);
+
 			if (postDataString) {
 				request.write(postDataString);
 			}

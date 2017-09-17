@@ -1,5 +1,10 @@
 'use strict';
 
+/*
+ * This is no longer used after Akun switched to its own websocket cluster.
+ * Let's just leave this gathering dust in case its ever relevant again though.
+ */
+
 const WebSocket = require('ws');
 
 class PusherConnection {

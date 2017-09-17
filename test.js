@@ -6,12 +6,15 @@ const Akun = require('./index.js');
 
 let credentials = JSON.parse(fs.readFileSync('credentials.json'));
 
-let akun = new Akun({ hostname: 'fiction.live' });
+let akun = new Akun({
+	hostname: 'fiction.live',
+	connection: {
+		hostname: 'rt.fiction.live'
+	}
+});
 
 let storyId = 'vhHhMfskRnNDbxwzo';
-let storyClient = akun.join(storyId);
-
-storyClient.then(client => {
+akun.join(storyId).then(client => {
 
 	client.on('chat', chatNode => {
 		console.log(`${chatNode}`);
@@ -53,12 +56,10 @@ storyClient.then(client => {
 		console.log('subscriptionSucceeded', data);
 	});
 
-});
+}).catch(console.error);
 
 let chatId = 'oWC3WhFDMXqZkAG69';
-let chatClient = akun.join(chatId);
-
-chatClient.then(client => {
+akun.join(chatId).then(client => {
 
 	client.on('chat', data => {
 		console.log('chat', data);
@@ -84,4 +85,4 @@ chatClient.then(client => {
 		console.log('subscriptionSucceeded', data);
 	});
 
-});
+}).catch(console.error);

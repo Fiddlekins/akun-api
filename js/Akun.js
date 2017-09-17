@@ -1,7 +1,7 @@
 'use strict';
 
 const Core = require('./Core.js');
-const PusherConnection = require('./PusherConnection.js');
+const RealTimeConnection = require('./RealTimeConnection.js');
 const ChatClient = require('./Client.js').ChatClient;
 const StoryClient = require('./Client.js').StoryClient;
 
@@ -9,48 +9,41 @@ const StoryClient = require('./Client.js').StoryClient;
 
 class Akun {
 	constructor(settings) {
+		this._settings = settings;
 		this.core = new Core({ hostname: settings.hostname });
-		this.connection = new PusherConnection(this);
+		this.connection = new RealTimeConnection(this, this._settings.connection);
 		this.clients = new Map();
 	}
 
 	login(username, password, shouldRefresh) {
-		return new Promise((resolve, reject) => {
-			this.core.login(username, password).then(response => {
-				if (shouldRefresh) {
-					this.refreshConnection();
-				}
-				resolve(response);
-			}).catch(reject);
+		return this.core.login(username, password).then(response => {
+			if (shouldRefresh) {
+				this.refreshConnection();
+			}
+			return response;
 		});
 	}
 
 	refreshConnection() {
 		this.connection.destroy();
-		this.connection = new PusherConnection(this);
+		this.connection = new RealTimeConnection(this, this._settings.connection);
 		for (let client of this.clients.values()) {
 			client.refreshConnection();
 		}
 	}
 
 	join(id) {
-		return new Promise((resolve, reject) => {
-			this.getNode(id).then(response => {
-				let data;
-				try {
-					data = JSON.parse(response);
-				} catch (err) {
-					reject(err);
-				}
-				let client;
-				if (data['nt'] === 'story') {
-					client = new StoryClient(this, id);
-				} else {
-					client = new ChatClient(this, id);
-				}
-				this.clients.set(id, client);
-				resolve(client);
-			}).catch(reject);
+		return this.getNode(id).then(response => {
+			const data = JSON.parse(response);
+			let client;
+			if (data['nt'] === 'story') {
+				client = new StoryClient(this, id);
+			} else {
+				client = new ChatClient(this, id);
+			}
+			this.clients.set(id, client);
+			client.connect();
+			return client;
 		});
 	}
 
