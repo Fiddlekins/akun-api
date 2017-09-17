@@ -25,7 +25,7 @@ akun.join(storyId).then(client => {
 		}
 		if (chatNode.body === 'login') {
 
-			akun.login(credentials['username'], credentials['password'], true).then(response => {
+			akun.login(credentials['username'], credentials['password']).then(response => {
 				console.log(`Logged in as ${response['username']}!`);
 			}).catch(console.error);
 

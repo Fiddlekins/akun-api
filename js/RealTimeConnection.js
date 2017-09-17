@@ -7,21 +7,17 @@ class RealTimeConnection {
 		this._akun = akun;
 		this._hostname = settings.hostname;
 		this._active = false;
+		this._connecting = false;
 		this._clients = {};
 		this._pendingClients = [];
 		this._ws = null;
 		this._channelNameToClientIdMap = new Map();
 		this._cid = 1;
-
-		this._ws = new WebSocket(`wss://${this._hostname}/socketcluster/`);
-		this._ws.on('open', this._onOpen.bind(this));
-		this._ws.on('close', this._onClose.bind(this));
-		this._ws.on('error', this._onError.bind(this));
-		this._ws.on('message', this._onMessage.bind(this));
 	}
 
 	destroy() {
 		this._active = false;
+		this._connecting = false;
 		this._ws.close();
 		this._akun = null;
 	}
@@ -30,12 +26,24 @@ class RealTimeConnection {
 		return this._active;
 	}
 
+	connect() {
+		if (!this._connecting && !this._active) {
+			this._connecting = true;
+			this._ws = new WebSocket(`wss://${this._hostname}/socketcluster/`);
+			this._ws.on('open', this._onOpen.bind(this));
+			this._ws.on('close', this._onClose.bind(this));
+			this._ws.on('error', this._onError.bind(this));
+			this._ws.on('message', this._onMessage.bind(this));
+		}
+	}
+
 	addClient(client) {
 		if (this._active) {
 			this._clients[client.id] = client;
 			this._subscribeClient(client);
 		} else {
 			this._pendingClients.push(client);
+			this.connect();
 		}
 	}
 
@@ -45,6 +53,7 @@ class RealTimeConnection {
 
 	_onOpen() {
 		console.log(`Connection opened!`);
+		this._connecting = false;
 		this._sendMessage({
 			'event': '#handshake',
 			'data': {
