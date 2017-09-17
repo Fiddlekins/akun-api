@@ -1,11 +1,11 @@
 'use strict';
 
 const events = require('events');
-const History = require('./history.js');
-const ChatNode = require('./nodes/chatNode.js');
-const ChapterNode = require('./nodes/chapterNode.js');
-const ChoiceNode = require('./nodes/choiceNode.js');
-const ReaderPostNode = require('./nodes/readerPostNode.js');
+const History = require('./History.js');
+const ChatNode = require('./nodes/ChatNode.js');
+const ChapterNode = require('./nodes/ChapterNode.js');
+const ChoiceNode = require('./nodes/ChoiceNode.js');
+const ReaderPostNode = require('./nodes/ReaderPostNode.js');
 
 class ChatClient extends events.EventEmitter {
 	constructor(akun, id){

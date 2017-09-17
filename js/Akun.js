@@ -1,9 +1,9 @@
 'use strict';
 
-const Core = require('./core.js');
-const PusherConnection = require('./pusherConnection.js');
-const ChatClient = require('./client.js').ChatClient;
-const StoryClient = require('./client.js').StoryClient;
+const Core = require('./Core.js');
+const PusherConnection = require('./PusherConnection.js');
+const ChatClient = require('./Client.js').ChatClient;
+const StoryClient = require('./Client.js').StoryClient;
 
 // const Dice = require('./dice.js');
 

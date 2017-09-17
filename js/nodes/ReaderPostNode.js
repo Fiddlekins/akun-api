@@ -1,6 +1,6 @@
 'use strict';
 
-const Node = require('./baseNode.js');
+const Node = require('./BaseNode.js');
 
 class ReaderPostNode extends Node {
 	_init(){

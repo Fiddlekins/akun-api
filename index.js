@@ -1,3 +1,3 @@
 'use strict';
 
-module.exports = require('./js/akun.js');
+module.exports = require('./js/Akun.js');
