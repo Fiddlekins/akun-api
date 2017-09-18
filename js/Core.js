@@ -110,7 +110,7 @@ class Core {
 		} else {
 			response = await this.get(`api/${path}`);
 		}
-		return JSON.parse(response);
+		return Core._tryJSONParse(response);
 	}
 
 	get(path) {
@@ -168,7 +168,6 @@ class Core {
 	_addCookie(options) {
 		let cookie = this._cookie.serialize();
 		if (cookie.length) {
-			console.log(`Using cookie: ${cookie}`);
 			options.headers = options.headers || {};
 			options.headers['Cookie'] = cookie;
 		}
@@ -184,6 +183,15 @@ class Core {
 
 	static _encodeURLFormData(input) {
 		return qs.stringify(input, { arrayFormat: 'brackets' });
+	}
+
+	static _tryJSONParse(jsonString) {
+		try {
+			return JSON.parse(jsonString);
+		} catch (err) {
+			throw new Error(`akun-api unable to parse api response:
+${jsonString}`);
+		}
 	}
 }
 
