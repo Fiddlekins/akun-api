@@ -149,14 +149,14 @@ class Core {
 				response.on('end', () => {
 					if (response.headers['set-cookie']) {
 						response.headers['set-cookie'].forEach(cookie => {
-							this._cookie.add(cookie)
+							this._cookie.add(cookie);
 						});
 					}
 					resolve(str);
 				});
 			});
 
-			request.on('error', err => reject);
+			request.on('error', reject);
 
 			if (postDataString) {
 				request.write(postDataString);
