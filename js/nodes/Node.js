@@ -1,17 +1,16 @@
-'use strict';
-
 class Node {
-	constructor(data){
+	constructor(data) {
 		this._internal = data;
+		this._userName = null;
+		this._userId = null;
+		this._userAvatar = null;
 		this._init();
 	}
 
-	_init(){
+	_init() {
 		this._userName = 'Anon';
-		this._userId = null;
-		this._userAvatar = null;
 		if (this._internal['u']) {
-			let user = this._internal['u'][0] || this._internal['u'];
+			const user = this._internal['u'][0] || this._internal['u'];
 			if (user['n']) {
 				this._userName = user['n'];
 			}
@@ -24,42 +23,42 @@ class Node {
 		}
 	}
 
-	get data(){
+	get data() {
 		return this._internal;
 	}
 
-	get id(){
+	get id() {
 		return this._internal['_id'];
 	}
 
-	get body(){
+	get body() {
 		return this._internal['b'];
 	}
 
-	get username(){
+	get username() {
 		return this._userName;
 	}
 
-	get createdTime(){
+	get createdTime() {
 		return this._internal['ct'];
 	}
 
-	merge(newNodeData){
+	merge(newNodeData) {
 		Node._mergeNodeData(this._internal, newNodeData);
 		this._init();
 	}
 
-	replace(newNodeData){
+	replace(newNodeData) {
 		this._internal = newNodeData;
 		this._init();
 	}
 
-	toString(){
+	toString() {
 		return `BaseNode: ${JSON.stringify(this._internal)}`;
 	}
 
-	static _mergeNodeData(currentNodeData, newNodeData){
-		for (let prop in newNodeData) {
+	static _mergeNodeData(currentNodeData, newNodeData) {
+		for (const prop in newNodeData) {
 			if (prop !== 'updateProperties' && newNodeData.hasOwnProperty(prop)) {
 				if (typeof newNodeData[prop] === 'object' && !Array.isArray(newNodeData[prop])) {
 					if (typeof currentNodeData[prop] === 'object') {
@@ -75,4 +74,4 @@ class Node {
 	}
 }
 
-module.exports = Node;
+export default Node;

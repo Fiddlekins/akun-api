@@ -1,21 +1,19 @@
-'use strict';
-
-const Node = require('./BaseNode.js');
+import Node from './Node.js';
 
 class ReaderPostNode extends Node {
-	_init(){
+	_init() {
 		super._init();
 		this._votes = null;
 		this._dice = null;
 	}
 
-	get votes(){
+	get votes() {
 		if (this._votes) {
 			return this._votes;
 		}
-		let votes = this._internal['votes'];
+		const votes = this._internal['votes'];
 		this._votes = [];
-		for (let voter in votes) {
+		for (const voter in votes) {
 			if (votes.hasOwnProperty(voter)) {
 				this._votes.push(votes[voter]);
 			}
@@ -23,13 +21,13 @@ class ReaderPostNode extends Node {
 		return this._votes;
 	}
 
-	get dice(){
+	get dice() {
 		if (this._dice) {
 			return this._dice;
 		}
-		let dice = this._internal['dice'];
+		const dice = this._internal['dice'];
 		this._dice = [];
-		for (let user in dice) {
+		for (const user in dice) {
 			if (dice.hasOwnProperty(user)) {
 				this._dice.push(dice[user]);
 			}
@@ -37,9 +35,9 @@ class ReaderPostNode extends Node {
 		return this._dice;
 	}
 
-	toString(){
+	toString() {
 		return `ReaderPost: (${this.id}) votes: ${this.votes}, dice: ${this.dice}`;
 	}
 }
 
-module.exports = ReaderPostNode;
+export default ReaderPostNode;

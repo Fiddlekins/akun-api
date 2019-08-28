@@ -1,9 +1,7 @@
-'use strict';
-
-const Node = require('./BaseNode.js');
+import Node from './Node.js';
 
 class ChoiceNode extends Node {
-	_init(){
+	_init() {
 		super._init();
 		this._votes = {};
 		this._needsTallying = true;
@@ -12,26 +10,26 @@ class ChoiceNode extends Node {
 		this._votesSorted = null;
 	}
 
-	get choices(){
+	get choices() {
 		return this._internal['choices'];
 	}
 
-	get custom(){
+	get custom() {
 		return this._internal['custom'];
 	}
 
-	get multiple(){
+	get multiple() {
 		return this._internal['multiple'];
 	}
 
-	get voteWinning(){
+	get voteWinning() {
 		if (this._voteWinning) {
 			return this._voteWinning;
 		}
 		this._checkTally();
 		let highestVoteCount = -Infinity;
 		let highestVote = null;
-		for (let vote in this._votes) {
+		for (const vote in this._votes) {
 			if (this._votes.hasOwnProperty(vote) && this._votes[vote] > highestVoteCount) {
 				highestVote = vote;
 				highestVoteCount = this._votes[vote];
@@ -41,14 +39,14 @@ class ChoiceNode extends Node {
 		return this._voteWinning;
 	}
 
-	get voteLosing(){
+	get voteLosing() {
 		if (this._voteLosing) {
 			return this._voteLosing;
 		}
 		this._checkTally();
 		let lowestVoteCount = Infinity;
 		let lowestVote = null;
-		for (let vote in this._votes) {
+		for (const vote in this._votes) {
 			if (this._votes.hasOwnProperty(vote) && this._votes[vote] < lowestVoteCount) {
 				lowestVote = vote;
 				lowestVoteCount = this._votes[vote];
@@ -58,13 +56,13 @@ class ChoiceNode extends Node {
 		return this._voteLosing;
 	}
 
-	voteSlice(begin, end){
+	voteSlice(begin, end) {
 		if (this._votesSorted) {
 			return this._votesSorted.slice(begin, end);
 		}
 		this._checkTally();
 		this._votesSorted = [];
-		for (let vote in this._votes) {
+		for (const vote in this._votes) {
 			if (this._votes.hasOwnProperty(vote)) {
 				this._votesSorted.push(ChoiceNode._getVoteObject(vote, this._votes[vote]));
 			}
@@ -73,41 +71,41 @@ class ChoiceNode extends Node {
 		return this._votesSorted.slice(begin, end);
 	}
 
-	merge(newNodeData){
+	merge(newNodeData) {
 		super.merge(newNodeData);
 		this._needsTallying = true;
 	}
 
-	replace(newNodeData){
+	replace(newNodeData) {
 		super.replace(newNodeData);
 		this._needsTallying = true;
 	}
 
-	toString(){
+	toString() {
 		return `Choice: (${this.id}) ${JSON.stringify(this._internal['choices'])}`;
 	}
 
-	_checkTally(){
+	_checkTally() {
 		if (this._needsTallying) {
 			this._tallyVotes();
 		}
 	}
 
-	_tallyVotes(){
-		let choices = this.choices;
-		let votes = this._internal['votes'];
+	_tallyVotes() {
+		const choices = this.choices;
+		const votes = this._internal['votes'];
 		if (this.multiple) {
-			for (let voter in votes) {
+			for (const voter in votes) {
 				if (votes.hasOwnProperty(voter)) {
-					for (let vote of votes[voter]) {
+					for (const vote of votes[voter]) {
 						this._incrementChoice(choices[vote]);
 					}
 				}
 			}
 		} else {
-			for (let voter in votes) {
+			for (const voter in votes) {
 				if (votes.hasOwnProperty(voter)) {
-					let vote = votes[voter];
+					const vote = votes[voter];
 					this._incrementChoice(choices[vote]);
 				}
 			}
@@ -115,18 +113,18 @@ class ChoiceNode extends Node {
 		this._needsTallying = false;
 	}
 
-	_incrementChoice(choice){
+	_incrementChoice(choice) {
 		this._votes[choice] = this._votes[choice] || 0;
 		this._votes[choice]++;
 	}
 
-	static _getVoteObject(vote, count){
-		return {vote: vote, count: count};
+	static _getVoteObject(vote, count) {
+		return { vote: vote, count: count };
 	}
 
-	static _voteSortFunction(a, b){
+	static _voteSortFunction(a, b) {
 		return a.count - b.count;
 	}
 }
 
-module.exports = ChoiceNode;
+export default ChoiceNode;

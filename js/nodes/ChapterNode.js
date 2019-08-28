@@ -1,15 +1,13 @@
-'use strict';
-
-const Node = require('./BaseNode.js');
+import Node from './Node.js';
 
 class ChapterNode extends Node {
-	_init(){
+	_init() {
 		super._init();
 	}
 
-	toString(){
+	toString() {
 		return `Chapter: (${this.id}) ${this.body && this.body.slice(0, 500)}`;
 	}
 }
 
-module.exports = ChapterNode;
+export default ChapterNode;

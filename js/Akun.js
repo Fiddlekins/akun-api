@@ -1,58 +1,89 @@
-'use strict';
-
-const Core = require('./Core.js');
-const RealTimeConnection = require('./RealTimeConnection.js');
-const ChatClient = require('./Client.js').ChatClient;
-const StoryClient = require('./Client.js').StoryClient;
-
-// const Dice = require('./dice.js');
+import Core from './Core.js';
+import RealTimeConnection from './RealTimeConnection.js';
+import {ChatClient, StoryClient} from './clients/index.js';
 
 class Akun {
 	constructor(settings) {
 		this._settings = settings;
 		this.core = new Core({ hostname: settings.hostname });
-		this.connection = new RealTimeConnection(this, this._settings.connection);
+		if (this._settings.connection) {
+			this.connection = new RealTimeConnection(this, this._settings.connection);
+		}
 		this.clients = new Map();
+		this._loggedIn = false;
 	}
 
-	login(username, password, shouldRefresh) {
-		return this.core.login(username, password).then(response => {
-			if (shouldRefresh) {
-				this.refreshConnection();
-			}
-			return response;
-		});
-	}
-
-	refreshConnection() {
+	destroy() {
 		this.connection.destroy();
-		this.connection = new RealTimeConnection(this, this._settings.connection);
-		for (let client of this.clients.values()) {
-			client.refreshConnection();
+		this.clients.forEach(client => client.destroy());
+	}
+
+	get loggedIn() {
+		return this._loggedIn;
+	}
+
+	async login(username, password, shouldRefresh = true) {
+		const res = await this.core.login(username, password);
+		this._loggedIn = true;
+		if (shouldRefresh) {
+			this.refreshConnection();
+		}
+		return res;
+	}
+
+	async logout(shouldRefresh = true) {
+		this.core.logout();
+		this._loggedIn = false;
+		if (shouldRefresh) {
+			this.refreshConnection();
 		}
 	}
 
-	join(id) {
-		return this.getNode(id).then(data => {
-			let client;
-			if (data['nt'] === 'story') {
-				client = new StoryClient(this, id);
-			} else {
-				client = new ChatClient(this, id);
-			}
-			this.clients.set(id, client);
-			client.connect();
-			return client;
-		});
+	refreshConnection() {
+		if (this.connection) {
+			this.connection.destroy();
+		}
+		this.connection = new RealTimeConnection(this, this._settings.connection);
+		this.clients.forEach(client => client.refreshConnection());
 	}
 
-	api(path, postData) {
-		return this.core.api(path, postData);
+	async join(id) {
+		const nodeData = await this.getNode(id);
+		const nodeType = nodeData['nt'];
+		let client;
+		switch (nodeType) {
+			case 'story':
+				client = new StoryClient(this, id);
+				break;
+			case 'chat':
+				client = new ChatClient(this, id);
+				break;
+			case 'post':
+				client = new ChatClient(this, id);
+				break;
+			default:
+				throw new Error(`Join request to unrecognised nodeType '${nodeType}':\n${nodeData}`);
+		}
+		this.clients.set(id, client);
+		await client.connect();
+		return client;
+	}
+
+	get(...args) {
+		return this.core.get(...args);
+	}
+
+	post(...args) {
+		return this.core.post(...args);
+	}
+
+	put(...args) {
+		return this.core.put(...args);
 	}
 
 	getNode(id) {
-		return this.core.api(`node/${id}`);
+		return this.core.get(`/api/node/${id}`);
 	}
 }
 
-module.exports = Akun;
+export default Akun;

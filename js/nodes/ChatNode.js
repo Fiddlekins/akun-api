@@ -1,15 +1,13 @@
-'use strict';
-
-const Node = require('./BaseNode.js');
+import Node from './Node.js';
 
 class ChatNode extends Node {
-	_init(){
+	_init() {
 		super._init();
 	}
 
-	toString(){
+	toString() {
 		return `Chat: ${this._userName} (${this._userId}): ${this.body}`;
 	}
 }
 
-module.exports = ChatNode;
+export default ChatNode;

@@ -1,3 +1,3 @@
-'use strict';
+import Akun from './js/Akun.js';
 
-module.exports = require('./js/Akun.js');
+export default Akun;

@@ -1,69 +1,6 @@
-'use strict';
-
-const https = require('https');
-const qs = require('qs');
-
-class Cookie {
-	constructor() {
-		this._values = new Map();
-		this._string = '';
-		this._ignoredKeys = new Set(['expires', 'domain', 'path']);
-	}
-
-	serialize() {
-		return this._string;
-	}
-
-	set(key, value) {
-		this._values.set(key, value);
-		this._serialize();
-	}
-
-	add(cookieString) {
-		let pairs = cookieString.split(/; */);
-		let obj = {};
-
-		for (let pair of pairs) {
-			let splitIndex = pair.indexOf('=');
-			if (splitIndex < 0) {
-				continue;
-			}
-			let key = pair.slice(0, splitIndex);
-			let value = pair.slice(splitIndex + 1).trim(); // Final value might have trailing whitespace
-			obj[Cookie._decode(key)] = Cookie._decode(value);
-		}
-
-		for (let key in obj) {
-			if (obj.hasOwnProperty(key) && !this._ignoredKeys.has(key)) {
-				this._values.set(key, obj[key]);
-			}
-		}
-
-		this._serialize();
-	}
-
-	_serialize() {
-		let pairStrings = [];
-		for (let [key, value] of this._values) {
-			pairStrings.push(Cookie._encode(key) + '=' + Cookie._encode(value));
-		}
-		this._string = pairStrings.join('; ');
-	}
-
-	static _encode(value) {
-		if (value === undefined) {
-			value = '';
-		}
-		return encodeURIComponent(value);
-	}
-
-	static _decode(value) {
-		if (value === undefined) {
-			value = '';
-		}
-		return decodeURIComponent(value);
-	}
-}
+import https from 'https';
+import qs from 'qs';
+import Cookie from './Cookie.js';
 
 class Core {
 	constructor({ hostname }) {
@@ -80,66 +17,70 @@ class Core {
 		return this._user;
 	}
 
-	login(username, password) {
-		return this.post('api/login', {
+	async login(username, password) {
+		const res = await this.post('/api/login', {
 			'user': username,
 			'password': password
-		}).then(response => {
-			let data = JSON.parse(response);
-			if (data['err']) {
-				throw new Error(data['err']);
-			} else {
-				this._user = data;
-				this._cookie.set('ajs_user_id', `"${data['_id']}"`);
-				this._cookie.set('loginToken', JSON.stringify({
-					'loginToken': data['token'],
-					'userId': data['_id']
-				}));
-				return data;
-			}
 		});
+		if (res['err']) {
+			throw new Error(res['err']);
+		}
+		this._user = res;
+		this._cookie.set('ajs_user_id', `"${res['_id']}"`);
+		this._cookie.set('loginToken', JSON.stringify({
+			'loginToken': res['token'],
+			'userId': res['_id']
+		}));
+		return res;
 	}
 
-	async api(path, postData) {
-		if (path.charAt(0) === '/') {
-			path = path.slice(1);
-		}
-		let response;
-		if (postData) {
-			response = await this.post(`api/${path}`, postData);
-		} else {
-			response = await this.get(`api/${path}`);
-		}
-		return Core._tryJSONParse(response);
+	logout() {
+		this._cookie = new Cookie();
 	}
 
-	get(path) {
-		let options = {
+	get(path, json = true) {
+		const options = {
 			hostname: this._hostname,
-			path: Core._validatePath(path),
+			path,
 			method: 'GET'
 		};
-		return this._request(options);
+		return this._request(options, null, json);
 	}
 
-	post(path, postData) {
-		let postDataString = Core._encodeURLFormData(postData);
-		let options = {
+	post(path, postData, json = true) {
+		const postDataString = qs.stringify(postData, { arrayFormat: 'brackets' });
+		const options = {
 			hostname: this._hostname,
-			path: Core._validatePath(path),
+			path,
 			method: 'POST',
 			headers: {
-				'Content-Type': 'application/x-www-form-urlencoded',
-				'Content-Length': Buffer.byteLength(postDataString)
+				'content-type': 'application/x-www-form-urlencoded; charset=UTF-8',
+				'content-length': Buffer.byteLength(postDataString)
 			}
 		};
-		return this._request(options, postDataString);
+		return this._request(options, postDataString, json);
 	}
 
-	_request(options, postDataString) {
+	put(path, putData, json = true) {
+		const putDataString = JSON.stringify(putData);
+		const options = {
+			hostname: this._hostname,
+			path,
+			method: 'PUT',
+			headers: {
+				'content-type': 'application/json; charset=UTF-8',
+				'content-length': Buffer.byteLength(putDataString)
+			}
+		};
+		return this._request(options, putDataString, json);
+	}
+
+	_request(options, postDataString, json = false) {
 		this._addCookie(options);
+		// console.log(options);
+		// console.log(postDataString);
 		return new Promise((resolve, reject) => {
-			let request = https.request(options, response => {
+			const request = https.request(options, response => {
 				let str = '';
 
 				response.on('data', chunk => {
@@ -152,7 +93,24 @@ class Core {
 							this._cookie.add(cookie);
 						});
 					}
-					resolve(str);
+					// console.log(response.statusCode);
+					// console.log(response.statusMessage);
+					if (json) {
+						try {
+							resolve(JSON.parse(str));
+						} catch (err) {
+							const errorMessage = `akun-api unable to parse response for request '${options.path}':
+Response:
+${str}
+
+Called with:
+${JSON.stringify(options, null, '\t')}
+${postDataString}`;
+							reject(new Error(errorMessage));
+						}
+					} else {
+						resolve(str);
+					}
 				});
 			});
 
@@ -166,33 +124,12 @@ class Core {
 	}
 
 	_addCookie(options) {
-		let cookie = this._cookie.serialize();
+		const cookie = this._cookie.serialize();
 		if (cookie.length) {
 			options.headers = options.headers || {};
-			options.headers['Cookie'] = cookie;
-		}
-	}
-
-	static _validatePath(path) {
-		if (path.charAt(0) !== '/') {
-			return '/' + path;
-		} else {
-			return path;
-		}
-	}
-
-	static _encodeURLFormData(input) {
-		return qs.stringify(input, { arrayFormat: 'brackets' });
-	}
-
-	static _tryJSONParse(jsonString) {
-		try {
-			return JSON.parse(jsonString);
-		} catch (err) {
-			throw new Error(`akun-api unable to parse api response:
-${jsonString}`);
+			options.headers['cookie'] = cookie;
 		}
 	}
 }
 
-module.exports = Core;
+export default Core;

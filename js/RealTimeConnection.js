@@ -1,6 +1,4 @@
-'use strict';
-
-const WebSocket = require('ws');
+import WebSocket from 'ws';
 
 class RealTimeConnection {
 	constructor(akun, settings) {
@@ -13,12 +11,23 @@ class RealTimeConnection {
 		this._ws = null;
 		this._channelNameToClientIdMap = new Map();
 		this._cid = 1;
+
+		this._boundOnOpen = this._onOpen.bind(this);
+		this._boundOnClose = this._onClose.bind(this);
+		this._boundOnError = this._onError.bind(this);
+		this._boundOnMessage = this._onMessage.bind(this);
 	}
 
 	destroy() {
 		this._active = false;
 		this._connecting = false;
-		this._ws.close();
+		if (this._ws) {
+			this._ws.off('open', this._boundOnOpen);
+			this._ws.off('close', this._boundOnClose);
+			this._ws.off('error', this._boundOnError);
+			this._ws.off('message', this._boundOnMessage);
+			this._ws.close();
+		}
 		this._akun = null;
 	}
 
@@ -30,10 +39,10 @@ class RealTimeConnection {
 		if (!this._connecting && !this._active) {
 			this._connecting = true;
 			this._ws = new WebSocket(`wss://${this._hostname}/socketcluster/`);
-			this._ws.on('open', this._onOpen.bind(this));
-			this._ws.on('close', this._onClose.bind(this));
-			this._ws.on('error', this._onError.bind(this));
-			this._ws.on('message', this._onMessage.bind(this));
+			this._ws.on('open', this._boundOnOpen);
+			this._ws.on('close', this._boundOnClose);
+			this._ws.on('error', this._boundOnError);
+			this._ws.on('message', this._boundOnMessage);
 		}
 	}
 
@@ -52,7 +61,7 @@ class RealTimeConnection {
 	}
 
 	_onOpen() {
-		console.log(`Connection opened!`);
+		// console.log(`Connection opened!`);
 		this._connecting = false;
 		this._sendMessage({
 			'event': '#handshake',
@@ -63,14 +72,15 @@ class RealTimeConnection {
 	}
 
 	_onClose() {
-		console.log(`Connection closed.`);
+		// console.log(`Connection closed.`);
 	}
 
 	_onError(err) {
-		console.error(`Connection experienced an error: ${err}`);
+		throw new Error(`Connection experienced an error: ${err}`);
 	}
 
 	_onMessage(rawMessage) {
+		// console.log(rawMessage);
 		switch (rawMessage.charAt(0)) {
 			case '#':
 				switch (rawMessage) {
@@ -78,11 +88,11 @@ class RealTimeConnection {
 						this._sendHeartbeat();
 						break;
 					default:
-						console.error(`Connection received an unrecognised message: ${rawMessage}`);
+						throw new Error(`Connection received an unrecognised message: ${rawMessage}`);
 				}
 				break;
 			case '{':
-				let message = JSON.parse(rawMessage);
+				const message = JSON.parse(rawMessage);
 				switch (message['event']) {
 					case undefined:
 						if (message['rid']) {
@@ -90,7 +100,7 @@ class RealTimeConnection {
 								this._onConnectionEstablished(message);
 							}
 						} else {
-							console.error(`Connection received an unrecognised message: ${rawMessage}`);
+							throw new Error(`Connection received an unrecognised message: ${rawMessage}`);
 						}
 						break;
 					case '#publish':
@@ -100,40 +110,56 @@ class RealTimeConnection {
 						this._onDisconnect(message['data']);
 						break;
 					default:
-						console.error(`Connection received an unrecognised message: ${rawMessage}`);
+						throw new Error(`Connection received an unrecognised message: ${rawMessage}`);
 				}
 				break;
 			default:
-				console.error(`Connection received an unrecognised message: ${rawMessage}`);
+				throw new Error(`Connection received an unrecognised message: ${rawMessage}`);
 		}
 	}
 
 	_onConnectionEstablished(message) {
 		this._active = true;
-		for (const client of this._pendingClients) {
-			this.addClient(client);
-		}
+		this._pendingClients.forEach(client => this.addClient(client));
 		this._pendingClients.length = 0;
 	}
 
 	_onPublish(data) {
 		switch (data['data'] && data['data']['event']) {
+			case 'changed':
+				this._onChanged(data);
+				break;
 			case 'childChanged':
 				this._onChildChanged(data);
 				break;
+			case 'updateUsersCount':
+				this._onUpdateUsersCount(data);
+				break;
 			default:
-				console.error(`Connection received unrecognised data: ${data}`);
+				throw new Error(`Connection received unrecognised data: ${JSON.stringify(data)}`);
 		}
 	}
 
+	_onChanged(data) {
+		const channelName = data['channel'];
+		const clientId = this._channelNameToClientIdMap.get(channelName);
+		this._clients[clientId].newMetaData(data['data']['message']);
+	}
+
 	_onChildChanged(data) {
-		let channelName = data['channel'];
-		let clientId = this._channelNameToClientIdMap.get(channelName);
-		this._clients[clientId].emit('message', data['data']['message']);
+		const channelName = data['channel'];
+		const clientId = this._channelNameToClientIdMap.get(channelName);
+		this._clients[clientId].newMessage(data['data']['message']);
+	}
+
+	_onUpdateUsersCount(data) {
+		const channelName = data['channel'];
+		const clientId = this._channelNameToClientIdMap.get(channelName);
+		this._clients[clientId].updateUsersCount(data['data']['message']['count']);
 	}
 
 	_onDisconnect(data) {
-		console.error(`Connection disconnected with error code: ${data.code}`);
+		throw new Error(`Connection disconnected with error code: ${data.code}`);
 	}
 
 	_send(dataString) {
@@ -143,8 +169,8 @@ class RealTimeConnection {
 	_sendMessage(data) {
 		data['cid'] = this._cid;
 		this._cid++;
-		let dataString = JSON.stringify(data);
-		console.log(`Connection sent message: ${dataString}`);
+		const dataString = JSON.stringify(data);
+		// console.log(`Connection sent message: ${dataString}`);
 		this._send(dataString);
 	}
 
@@ -153,25 +179,23 @@ class RealTimeConnection {
 	}
 
 	_subscribeClient(client) {
-		let nameChat = client.nameChat;
-		let nameStory = client.nameStory;
+		const nameChat = client.nameChat;
+		const nameMeta = client.nameMeta;
+		const nameStory = client.nameStory;
 
 		this._channelNameToClientIdMap.set(nameChat, client.id);
 		this._subscribe(nameChat);
+		if (nameMeta) {
+			this._channelNameToClientIdMap.set(nameMeta, client.id);
+			this._subscribe(nameMeta);
+		}
 		if (nameStory) {
 			this._channelNameToClientIdMap.set(nameStory, client.id);
 			this._subscribe(nameStory);
 		}
-	}
-
-	_login() {
-		this._sendMessage({
-			'event': '#login',
-			'data': {
-				'loginToken': 'figure out where this even comes from at some point when logging in actually makes a difference',
-				'userId': ''
-			}
-		});
+		if (this._akun.loggedIn) {
+			this._login();
+		}
 	}
 
 	_subscribe(channelName) {
@@ -182,6 +206,16 @@ class RealTimeConnection {
 			}
 		});
 	}
+
+	_login() {
+		this._sendMessage({
+			'event': '#login',
+			'data': {
+				'loginToken': this._akun.core.user['loginToken'],
+				'userId': this._akun.core.user['_id']
+			}
+		});
+	}
 }
 
-module.exports = RealTimeConnection;
+export default RealTimeConnection;

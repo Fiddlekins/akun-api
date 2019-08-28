@@ -1,88 +1,185 @@
-'use strict';
 // This file is intended for examples and testing
 
-const fs = require('fs');
-const Akun = require('./index.js');
+import fs from 'fs';
+import Akun from './index.js';
 
-let credentials = JSON.parse(fs.readFileSync('credentials.json'));
+const credentials = JSON.parse(fs.readFileSync('credentials.json'));
 
-let akun = new Akun({
-	hostname: 'fiction.live',
-	connection: {
-		hostname: 'rt.fiction.live'
+function setTimeoutPromise(duration) {
+	return new Promise(res => setTimeout(res, duration));
+}
+
+async function onChat(akun, client, chatNode) {
+	console.log(`New ChatNode:\n${chatNode}`);
+	// console.log('historyChat', client.historyChat.slice());
+	if (chatNode.body === 'peng') {
+		console.log('attempting response');
+		const res = await client.post('pung');
+		console.log(`post response: ${res}`);
 	}
-});
+	if (chatNode.body === 'login') {
+		const res = await akun.login(credentials['username'], credentials['password']);
+		console.log(`Logged in as ${res['username']}!`);
+	}
+	if (chatNode.body === 'reply') {
+		const res = await client.reply('rooply', chatNode.id);
+		console.log(`reply response: ${res}`);
+	}
+}
 
-let storyId = 'vhHhMfskRnNDbxwzo';
-akun.join(storyId).then(client => {
+async function onChatChanged(akun, client, chatNode) {
+	console.log(`Updated ChatNode:\n${chatNode}`);
+}
 
-	client.on('chat', chatNode => {
-		console.log(`${chatNode}`);
-		// console.log('historyChat', client.historyChat.slice());
-		if (chatNode.body === 'peng') {
-			client.post('pung').then(response => {
-			}).catch(console.error);
+async function onChapter(akun, client, chapterNode) {
+	console.log(`New ChapterNode:\n${chapterNode}`);
+	// console.log('historyStory', client.historyStory.slice());
+	if (chapterNode.body === '<p>ping</p>') {
+		console.log('Trying to chapter');
+		const res = await client.post('chapong');
+		console.log(`post response: ${res}`);
+	}
+}
+
+async function onChapterChanged(akun, client, chapterNode) {
+	console.log(`Updated ChapterNode:\n${chapterNode}`);
+}
+
+async function onChoice(akun, client, choiceNode) {
+	console.log(`New ChoiceNode:\n${choiceNode}`);
+	// console.log('historyStory', client.historyStory.slice());
+}
+
+async function onChoiceChanged(akun, client, choiceNode) {
+	console.log(`Updated ChoiceNode:\n${choiceNode}`);
+}
+
+async function onReaderPost(akun, client, readerPostNode) {
+	console.log(`New ReaderPostNode:\n${readerPostNode}`);
+	// console.log('historyStory', client.historyStory.slice());
+}
+
+async function onReaderPostChanged(akun, client, readerPostNode) {
+	console.log(`Updated ReaderPostNode:\n${readerPostNode}`);
+}
+
+async function onSubscriptionSucceeded(data) {
+	console.log('subscriptionSucceeded', data);
+}
+
+async function testStory(akun, storyId) {
+	const client = await akun.join(storyId);
+
+	client.on('chat', (node) => {
+		onChat(akun, client, node);
+	});
+	client.on('chatChanged', (node) => {
+		onChatChanged(akun, client, node);
+	});
+	client.on('chapter', (node) => {
+		onChapter(akun, client, node);
+	});
+	client.on('chapterChanged', (node) => {
+		onChapterChanged(akun, client, node);
+	});
+	client.on('choice', (node) => {
+		onChoice(akun, client, node);
+	});
+	client.on('choiceChanged', (node) => {
+		onChoiceChanged(akun, client, node);
+	});
+	client.on('readerPost', (node) => {
+		onReaderPost(akun, client, node);
+	});
+	client.on('readerPostChanged', (node) => {
+		onReaderPostChanged(akun, client, node);
+	});
+	client.on('subscriptionSucceeded', onSubscriptionSucceeded);
+
+	// const resTestPost1 = await client.post('Test post 1');
+	// console.log(`post response: ${resTestPost1}`);
+
+	const resLogin = await akun.login(credentials['username'], credentials['password']);
+	console.log(`Logged in as ${resLogin['username']}!`);
+
+	// const resTestPost2 = await client.post('Test post 2');
+	// console.log(`post response: ${resTestPost2}`);
+
+	return new Promise(res => {
+		client.on('chat', (node) => {
+			if (node.body === 'exit') {
+				res();
+			}
+		});
+	})
+}
+
+async function testChat(akun, chatId) {
+	const client = await akun.join(chatId);
+
+	client.on('chat', (node) => {
+		onChat(akun, client, node);
+	});
+	client.on('chapter', (node) => {
+		onChapter(akun, client, node);
+	});
+	client.on('choice', (node) => {
+		onChoice(akun, client, node);
+	});
+	client.on('readerPost', (node) => {
+		onReaderPost(akun, client, node);
+	});
+	client.on('subscriptionSucceeded', onSubscriptionSucceeded);
+
+	// const resTestPost1 = await client.post('Test post 1');
+	// console.log(`post response: ${resTestPost1}`);
+
+	// const resLogin = await akun.login(credentials['username'], credentials['password']);
+	// console.log(`Logged in as ${resLogin['username']}!`);
+
+	// const resTestPost2 = await client.post('Test post 2');
+	// console.log(`post response: ${resTestPost2}`);
+
+	return new Promise(res => {
+		client.on('chat', (node) => {
+			if (node.body === 'exit') {
+				res();
+			}
+		});
+	})
+}
+
+async function testPut(akun, chatId) {
+	await akun.login(credentials['username'], credentials['password']);
+	const client = await akun.join(chatId);
+	const postData = await client.post('Test post');
+	const post = await akun.getNode(postData['_id']);
+	post.b = 'edited text';
+	console.log(await akun.put('/api/node', post));
+}
+
+async function runTests(akun) {
+	await testStory(akun, 'vhHhMfskRnNDbxwzo');
+	// await testChat(akun, 'oWC3WhFDMXqZkAG69');
+	// await testPut(akun, 'vhHhMfskRnNDbxwzo');
+}
+
+async function setup() {
+	return new Akun({
+		hostname: 'fiction.live',
+		connection: {
+			hostname: 'rt.fiction.live'
 		}
-		if (chatNode.body === 'login') {
+	});
+}
 
-			akun.login(credentials['username'], credentials['password']).then(response => {
-				console.log(`Logged in as ${response['username']}!`);
-			}).catch(console.error);
+async function teardown(akun) {
+	await akun.destroy();
+}
 
-		}
-		if (chatNode.body === 'reply') {
-			client.reply('rooply', chatNode.id);
-		}
-	});
-	client.on('chapter', chapterNode => {
-		console.log(`${chapterNode}`);
-		// console.log('historyStory', client.historyStory.slice());
-		if (chapterNode.body === '<p>ping</p>') {
-			console.log('Trying to chapter');
-			client.post('chapong').then(response => {
-				console.log(response)
-			}).catch(console.error);
-		}
-	});
-	client.on('choice', choiceNode => {
-		console.log(`${choiceNode}`);
-		// console.log('historyStory', client.historyStory.slice());
-	});
-	client.on('readerPost', readerPostNode => {
-		console.log(`${readerPostNode}`);
-		// console.log('historyStory', client.historyStory.slice());
-	});
-	client.on('subscriptionSucceeded', data => {
-		console.log('subscriptionSucceeded', data);
-	});
+(async function run() {
+	const akun = await setup();
+	await runTests(akun).catch(console.error);
+	await teardown(akun);
+})().catch(console.error);
 
-}).catch(console.error);
-
-let chatId = 'oWC3WhFDMXqZkAG69';
-akun.join(chatId).then(client => {
-
-	client.on('chat', data => {
-		console.log('chat', data);
-		// console.log('historyChat', client.historyChat.slice());
-		if (data['b'] === 'peng') {
-			console.log('Trying to post');
-			client.post('pung').then(response => {
-				console.log(response)
-			}).catch(console.error);
-		}
-	});
-	client.on('chapter', data => {
-		console.log('chapter', data);
-		// console.log('historyStory', client.historyStory.slice());
-		if (data['b'] === 'ping') {
-			console.log('Trying to chapter');
-			client.post('chapong').then(response => {
-				console.log(response)
-			}).catch(console.error);
-		}
-	});
-	client.on('subscriptionSucceeded', data => {
-		console.log('subscriptionSucceeded', data);
-	});
-
-}).catch(console.error);
