@@ -10,7 +10,6 @@ class Akun {
 			this.connection = new RealTimeConnection(this, this._settings.connection);
 		}
 		this.clients = new Map();
-		this._loggedIn = false;
 	}
 
 	destroy() {
@@ -19,12 +18,11 @@ class Akun {
 	}
 
 	get loggedIn() {
-		return this._loggedIn;
+		return this.core.loggedIn;
 	}
 
 	async login(username, password, shouldRefresh = true) {
 		const res = await this.core.login(username, password);
-		this._loggedIn = true;
 		if (shouldRefresh) {
 			this.refreshConnection();
 		}
@@ -33,7 +31,6 @@ class Akun {
 
 	async logout(shouldRefresh = true) {
 		this.core.logout();
-		this._loggedIn = false;
 		if (shouldRefresh) {
 			this.refreshConnection();
 		}
@@ -83,6 +80,14 @@ class Akun {
 
 	getNode(id) {
 		return this.core.get(`/api/node/${id}`);
+	}
+
+	async setAnon(postAsAnon = true) {
+		if (!this.loggedIn) {
+			throw new Error(`Tried to set anon mode whilst not logged into an account`);
+		}
+		this.core.profileSettings.asAnon = postAsAnon;
+		await this.core.updateProfileSettings(this.core.profileSettings);
 	}
 }
 

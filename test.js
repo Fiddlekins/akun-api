@@ -158,8 +158,18 @@ async function testPut(akun, chatId) {
 	console.log(await akun.put('/api/node', post));
 }
 
+async function testAnonToggle(akun, chatId) {
+	await akun.login(credentials['username'], credentials['password']);
+	const client = await akun.join(chatId);
+	await akun.setAnon(true);
+	await client.post('Test anon post');
+	await akun.setAnon(false);
+	await client.post('Test non-anon post');
+}
+
 async function runTests(akun) {
-	await testStory(akun, 'vhHhMfskRnNDbxwzo');
+	await testAnonToggle(akun, 'vhHhMfskRnNDbxwzo');
+	// await testStory(akun, 'vhHhMfskRnNDbxwzo');
 	// await testChat(akun, 'oWC3WhFDMXqZkAG69');
 	// await testPut(akun, 'vhHhMfskRnNDbxwzo');
 }

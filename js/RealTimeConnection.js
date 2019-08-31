@@ -211,8 +211,8 @@ class RealTimeConnection {
 		this._sendMessage({
 			'event': '#login',
 			'data': {
-				'loginToken': this._akun.core.user['loginToken'],
-				'userId': this._akun.core.user['_id']
+				'loginToken': this._akun.core.loginData['loginToken'],
+				'userId': this._akun.core.loginData['_id']
 			}
 		});
 	}

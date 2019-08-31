@@ -6,15 +6,42 @@ class Core {
 	constructor({ hostname }) {
 		this._hostname = hostname;
 		this._cookie = new Cookie();
-		this._user = null;
+		this._loginData = null;
+		this._settings = null;
+		this._currentUser = null;
+		this._siteVersion = null;
+		this._loggedIn = false;
 	}
 
 	get hostname() {
 		return this._hostname;
 	}
 
-	get user() {
-		return this._user;
+	get loginData() {
+		return this._loginData;
+	}
+
+	get loggedIn() {
+		return this._loggedIn;
+	}
+
+	get profileSettings() {
+		if (this._loggedIn) {
+			if (!this._currentUser.profile) {
+				this._currentUser.profile = {};
+			}
+			return this._currentUser.profile;
+		} else {
+			return null;
+		}
+	}
+
+	async updateSiteData() {
+		const pageString = await this.get('', false);
+		const data = this._extractDataFromPage(pageString);
+		this._settings = data.settings;
+		this._currentUser = data.currentUser;
+		this._siteVersion = data.version;
 	}
 
 	async login(username, password) {
@@ -25,17 +52,33 @@ class Core {
 		if (res['err']) {
 			throw new Error(res['err']);
 		}
-		this._user = res;
+		this._loginData = res;
 		this._cookie.set('ajs_user_id', `"${res['_id']}"`);
 		this._cookie.set('loginToken', JSON.stringify({
 			'loginToken': res['token'],
 			'userId': res['_id']
 		}));
+		await this.updateSiteData();
+		this._loggedIn = true;
 		return res;
 	}
 
 	logout() {
 		this._cookie = new Cookie();
+		this._loggedIn = false;
+	}
+
+	async updateProfileSettings(settings, safe = true) {
+		if (!this._loggedIn) {
+			throw new Error(`Tried to update profile settings whilst not logged into an account`);
+		}
+		if (!settings) {
+			settings = this._currentUser && this._currentUser.profile;
+		}
+		if (!settings && safe) {
+			throw new Error(`Tried to update profile settings with invalid settings object, prevented as likely to cause account corruption`);
+		}
+		await this.put('/api/user', settings, false);
 	}
 
 	get(path, json = true) {
@@ -128,6 +171,24 @@ ${postDataString}`;
 		if (cookie.length) {
 			options.headers = options.headers || {};
 			options.headers['cookie'] = cookie;
+		}
+	}
+
+	_extractDataFromPage(pageString) {
+		const components = ['<', 'script', '>', 'ty', '=', '([\\s\\S]+?);?', '</script', '>'];
+		const re = new RegExp(components.join('\\s*'), 'i');
+		const match = pageString.match(re);
+		if (!match) {
+			throw new Error(`Failed to extract data from page:\n${pageString}`);
+		}
+		let dataString = match[1];
+		try {
+			dataString = dataString.replace('settings:', '"settings":');
+			dataString = dataString.replace('currentUser:', '"currentUser":');
+			dataString = dataString.replace(/version:\s?'([A-z0-9]+)'/, '"version":"$1"');
+			return JSON.parse(dataString);
+		} catch (err) {
+			throw new Error(`Failed to parse extracted data from page:\n${dataString}`);
 		}
 	}
 }
