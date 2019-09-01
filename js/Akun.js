@@ -23,7 +23,7 @@ class Akun {
 
 	async login(username, password, shouldRefresh = true) {
 		const res = await this.core.login(username, password);
-		if (shouldRefresh) {
+		if (shouldRefresh && this._settings.connection) {
 			this.refreshConnection();
 		}
 		return res;
