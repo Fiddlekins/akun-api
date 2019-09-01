@@ -7,7 +7,7 @@ class Core {
 		this._hostname = hostname;
 		this._cookie = new Cookie();
 		this._loginData = null;
-		this._settings = null;
+		this._siteSettings = null;
 		this._currentUser = null;
 		this._siteVersion = null;
 		this._loggedIn = false;
@@ -25,6 +25,18 @@ class Core {
 		return this._loggedIn;
 	}
 
+	get siteSettings() {
+		return this._siteSettings;
+	}
+
+	get currentUser() {
+		return this._currentUser;
+	}
+
+	get siteVersion() {
+		return this._siteVersion;
+	}
+
 	get profileSettings() {
 		if (this._loggedIn) {
 			if (!this._currentUser.profile) {
@@ -39,7 +51,7 @@ class Core {
 	async updateSiteData() {
 		const pageString = await this.get('', false);
 		const data = this._extractDataFromPage(pageString);
-		this._settings = data.settings;
+		this._siteSettings = data.settings;
 		this._currentUser = data.currentUser;
 		this._siteVersion = data.version;
 	}
