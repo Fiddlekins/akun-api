@@ -1,6 +1,6 @@
 {
   "name": "akun-api",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "A module intended to enable easy interactions with Anonkun",
   "main": "index.js",
   "type": "module",
