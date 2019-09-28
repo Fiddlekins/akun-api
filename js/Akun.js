@@ -89,6 +89,20 @@ class Akun {
 		this.core.profileSettings.asAnon = postAsAnon;
 		await this.core.updateProfileSettings(this.core.profileSettings);
 	}
+
+	vote(id, choice) {
+		return this.core.post(`/api/anonkun/voteChapter`, {
+			_id: id,
+			vote: choice
+		});
+	}
+
+	removeVote(id, choice) {
+		return this.core.delete(`/api/anonkun/voteChapter`, {
+			_id: id,
+			vote: choice
+		});
+	}
 }
 
 export default Akun;

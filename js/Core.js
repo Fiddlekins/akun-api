@@ -116,6 +116,20 @@ class Core {
 		return this._request(options, postDataString, json);
 	}
 
+	delete(path, postData, json = true) {
+		const postDataString = qs.stringify(postData, { arrayFormat: 'brackets' });
+		const options = {
+			hostname: this._hostname,
+			path,
+			method: 'DELETE',
+			headers: {
+				'content-type': 'application/x-www-form-urlencoded; charset=UTF-8',
+				'content-length': Buffer.byteLength(postDataString)
+			}
+		};
+		return this._request(options, postDataString, json);
+	}
+
 	put(path, putData, json = true) {
 		const putDataString = JSON.stringify(putData);
 		const options = {
