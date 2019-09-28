@@ -13,7 +13,9 @@ class Akun {
 	}
 
 	destroy() {
-		this.connection.destroy();
+		if (this.connection) {
+			this.connection.destroy();
+		}
 		this.clients.forEach(client => client.destroy());
 	}
 

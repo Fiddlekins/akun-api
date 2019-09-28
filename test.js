@@ -167,20 +167,32 @@ async function testAnonToggle(akun, chatId) {
 	await client.post('Test non-anon post');
 }
 
+async function testVote(akun, pollId) {
+	await akun.vote(pollId, 0);
+	await akun.removeVote(pollId, 0);
+}
+
 async function runTests(akun) {
 	await testAnonToggle(akun, 'vhHhMfskRnNDbxwzo');
 	// await testStory(akun, 'vhHhMfskRnNDbxwzo');
 	// await testChat(akun, 'oWC3WhFDMXqZkAG69');
 	// await testPut(akun, 'vhHhMfskRnNDbxwzo');
+	// await testVote(akun, 'TziTddJsppEfr82nh');
 }
 
-async function setup() {
-	return new Akun({
-		hostname: 'fiction.live',
-		connection: {
-			hostname: 'rt.fiction.live'
-		}
-	});
+async function setup(withRealtime = true) {
+	if (withRealtime) {
+		return new Akun({
+			hostname: 'fiction.live',
+			connection: {
+				hostname: 'rt.fiction.live'
+			}
+		});
+	} else {
+		return new Akun({
+			hostname: 'fiction.live'
+		});
+	}
 }
 
 async function teardown(akun) {
