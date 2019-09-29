@@ -76,6 +76,10 @@ class Akun {
 		return this.core.post(...args);
 	}
 
+	delete(...args) {
+		return this.core.delete(...args);
+	}
+
 	put(...args) {
 		return this.core.put(...args);
 	}
