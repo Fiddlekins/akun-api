@@ -1,15 +1,6 @@
 import Node from './Node.js';
 
 class ChoiceNode extends Node {
-	_init() {
-		super._init();
-		this._votes = {};
-		this._needsTallying = true;
-		this._voteWinning = null;
-		this._voteLosing = null;
-		this._votesSorted = null;
-	}
-
 	get choices() {
 		return this._internal['choices'];
 	}
@@ -54,6 +45,23 @@ class ChoiceNode extends Node {
 		}
 		this._voteLosing = ChoiceNode._getVoteObject(lowestVote, lowestVoteCount);
 		return this._voteLosing;
+	}
+
+	static _getVoteObject(vote, count) {
+		return { vote: vote, count: count };
+	}
+
+	static _voteSortFunction(a, b) {
+		return a.count - b.count;
+	}
+
+	_init() {
+		super._init();
+		this._votes = {};
+		this._needsTallying = true;
+		this._voteWinning = null;
+		this._voteLosing = null;
+		this._votesSorted = null;
 	}
 
 	voteSlice(begin, end) {
@@ -116,14 +124,6 @@ class ChoiceNode extends Node {
 	_incrementChoice(choice) {
 		this._votes[choice] = this._votes[choice] || 0;
 		this._votes[choice]++;
-	}
-
-	static _getVoteObject(vote, count) {
-		return { vote: vote, count: count };
-	}
-
-	static _voteSortFunction(a, b) {
-		return a.count - b.count;
 	}
 }
 

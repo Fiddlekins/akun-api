@@ -41,6 +41,10 @@ class History {
 		});
 	}
 
+	forEach(...args) {
+		return this._content.forEach(...args);
+	}
+
 	add(node) {
 		const id = node.id;
 		this._order.push(id);
@@ -51,10 +55,17 @@ class History {
 	update(node) {
 		const id = node.id;
 		const nodeData = node.data;
-		if (nodeData['updateProperties']) {
-			this._content.get(id).merge(nodeData);
+		if (this._content.has(id)) {
+			if (nodeData['updateProperties']) {
+				this._content.get(id).merge(nodeData);
+			} else {
+				this._content.get(id).replace(nodeData);
+			}
 		} else {
-			this._content.get(id).replace(nodeData);
+			const id = node.id;
+			this._order.unshift(id);
+			this._content.set(id, node);
+			this._cull();
 		}
 	}
 

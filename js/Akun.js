@@ -1,6 +1,6 @@
+import {ChatClient, StoryClient} from './clients/index.js';
 import Core from './Core.js';
 import RealTimeConnection from './RealTimeConnection.js';
-import {ChatClient, StoryClient} from './clients/index.js';
 
 class Akun {
 	constructor(settings) {
@@ -12,15 +12,15 @@ class Akun {
 		this.clients = new Map();
 	}
 
+	get loggedIn() {
+		return this.core.loggedIn;
+	}
+
 	destroy() {
 		if (this.connection) {
 			this.connection.destroy();
 		}
 		this.clients.forEach(client => client.destroy());
-	}
-
-	get loggedIn() {
-		return this.core.loggedIn;
 	}
 
 	async login(username, password, shouldRefresh = true) {
@@ -52,19 +52,22 @@ class Akun {
 		let client;
 		switch (nodeType) {
 			case 'story':
-				client = new StoryClient(this, id);
+				client = new StoryClient(this, nodeData);
 				break;
 			case 'chat':
-				client = new ChatClient(this, id);
+				client = new ChatClient(this, nodeData);
 				break;
 			case 'post':
-				client = new ChatClient(this, id);
+				client = new ChatClient(this, nodeData);
 				break;
 			default:
 				throw new Error(`Join request to unrecognised nodeType '${nodeType}':\n${nodeData}`);
 		}
+		await client.init();
 		this.clients.set(id, client);
-		await client.connect();
+		if (this.connection) {
+			await client.connect();
+		}
 		return client;
 	}
 

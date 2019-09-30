@@ -3,21 +3,16 @@ import History from '../History.js';
 import {ChatNode} from '../nodes/index.js';
 
 class ChatClient extends events.EventEmitter {
-	constructor(akun, id) {
+	constructor(akun, nodeData) {
 		super();
 		this._akun = akun;
-		this._id = id;
-		this._nameChat = `presence-chat-${id}-latest`;
+		this._id = nodeData['_id'];
+		this._nameChat = `presence-chat-${this._id}-latest`;
+		this._metaData = nodeData; // Realtime connection never updates this so can't really be used in ChatClient, StoryClient is fine though
 		this._historyChat = new History();
 		this._usersCount = null;
-	}
-
-	destroy() {
-		if (this._akun.connection) {
-			this._akun.connection.removeClient(this);
-		}
-		this._akun.clients.delete(this._id);
-		this._akun = null;
+		// No guaranteed way to distinguish new nodes from edited nodes, so instead assume any node with ct over threshold less than latest node is an edit
+		this._newVsEditThreshold = 1000 * 10;
 	}
 
 	get id() {
@@ -36,6 +31,21 @@ class ChatClient extends events.EventEmitter {
 		return this._usersCount;
 	}
 
+	async init() {
+		const chat = await this._akun.get(`/api/chat/${this._id}/latest`);
+		for (const nodeData of chat) {
+			this.newMessage(nodeData, false);
+		}
+	}
+
+	destroy() {
+		if (this._akun.connection) {
+			this._akun.connection.removeClient(this);
+		}
+		this._akun.clients.delete(this._id);
+		this._akun = null;
+	}
+
 	connect() {
 		if (!this._akun.connection) {
 			throw new Error(`Client tried to connect to realtime connection but Akun instance does not have one.`);
@@ -51,10 +61,17 @@ class ChatClient extends events.EventEmitter {
 		return this._post(body);
 	}
 
-	reply(body, replyId) {
+	async reply(body, replyId) {
 		let replyObject;
-		const replyNode = this._historyChat.get(replyId);
-		// TODO if not found in own chat make a get request to grab the message data from akun
+		let replyNode = this._historyChat.get(replyId);
+		if (!replyNode) {
+			const nodeData = await this._akun.getNode(replyId);
+			if (!nodeData) {
+				throw Error(`Can't find node with id ${replyId} to reply to`);
+			}
+			this.newMessage(nodeData, false);
+			replyNode = this._historyChat.get(replyId);
+		}
 		if (replyNode) {
 			replyObject = {};
 			replyObject['_id'] = replyNode.data['_id'];
@@ -64,14 +81,14 @@ class ChatClient extends events.EventEmitter {
 		return this._post(body, replyObject);
 	}
 
-	newMessage(data) {
+	newMessage(data, notify = true) {
 		const nodeType = data['nt'];
 		switch (nodeType) {
 			case 'chat':
-				this._onChat(new ChatNode(data));
+				this._onChat(new ChatNode(data), notify);
 				break;
 			default:
-				throw new Error(`StoryClient received unrecognised nodeType '${nodeType}':\n${data}`);
+				throw new Error(`Client received unrecognised nodeType '${nodeType}':\n${data}`);
 		}
 	}
 
@@ -80,13 +97,17 @@ class ChatClient extends events.EventEmitter {
 		this.emit('usersCount', usersCount);
 	}
 
-	_onChat(node) {
-		if (this._historyChat.has(node)) {
+	_onChat(node, notify) {
+		if (this._historyChat.has(node) || !this._historyChat.last() || (this._historyChat.last().createdTime - node.createdTime >= this._newVsEditThreshold)) {
 			this._historyChat.update(node);
-			this.emit('chatUpdated', node);
+			if (notify) {
+				this.emit('chatUpdated', node);
+			}
 		} else {
 			this._historyChat.add(node);
-			this.emit('chat', node);
+			if (notify) {
+				this.emit('chat', node);
+			}
 		}
 	}
 

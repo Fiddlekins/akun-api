@@ -105,6 +105,14 @@ async function testStory(akun, storyId) {
 	// const resTestPost2 = await client.post('Test post 2');
 	// console.log(`post response: ${resTestPost2}`);
 
+	// console.log(client.latestChapter());
+	// client.historyChat.forEach((node) => {
+	// 	console.log(node.toString())
+	// });
+	// client.historyStory.forEach((node) => {
+	// 	console.log(node.toString())
+	// });
+
 	return new Promise(res => {
 		client.on('chat', (node) => {
 			if (node.body === 'exit') {
@@ -172,8 +180,15 @@ async function testVote(akun, pollId) {
 	await akun.removeVote(pollId, 0);
 }
 
+async function testPost(akun, chatId) {
+	const client = await akun.join(chatId);
+	await client.post('Test post 1');
+	// console.log(await client.reply('rooply', 't2KXjRztofE5Z58uE'));
+}
+
 async function runTests(akun) {
 	await testAnonToggle(akun, 'vhHhMfskRnNDbxwzo');
+	// await testPost(akun, 'vhHhMfskRnNDbxwzo');
 	// await testStory(akun, 'vhHhMfskRnNDbxwzo');
 	// await testChat(akun, 'oWC3WhFDMXqZkAG69');
 	// await testPut(akun, 'vhHhMfskRnNDbxwzo');
@@ -200,7 +215,7 @@ async function teardown(akun) {
 }
 
 (async function run() {
-	const akun = await setup();
+	const akun = await setup(false);
 	await runTests(akun).catch(console.error);
 	await teardown(akun);
 })().catch(console.error);

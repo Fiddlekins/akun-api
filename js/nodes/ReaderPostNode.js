@@ -1,12 +1,6 @@
 import Node from './Node.js';
 
 class ReaderPostNode extends Node {
-	_init() {
-		super._init();
-		this._votes = null;
-		this._dice = null;
-	}
-
 	get votes() {
 		if (this._votes) {
 			return this._votes;
@@ -33,6 +27,12 @@ class ReaderPostNode extends Node {
 			}
 		}
 		return this._dice;
+	}
+
+	_init() {
+		super._init();
+		this._votes = null;
+		this._dice = null;
 	}
 
 	toString() {

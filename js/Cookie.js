@@ -5,6 +5,20 @@ class Cookie {
 		this._ignoredKeys = new Set(['expires', 'domain', 'path']);
 	}
 
+	static _encode(value) {
+		if (value === undefined) {
+			value = '';
+		}
+		return encodeURIComponent(value);
+	}
+
+	static _decode(value) {
+		if (value === undefined) {
+			value = '';
+		}
+		return decodeURIComponent(value);
+	}
+
 	serialize() {
 		return this._string;
 	}
@@ -43,20 +57,6 @@ class Cookie {
 			pairStrings.push(Cookie._encode(key) + '=' + Cookie._encode(value));
 		}
 		this._string = pairStrings.join('; ');
-	}
-
-	static _encode(value) {
-		if (value === undefined) {
-			value = '';
-		}
-		return encodeURIComponent(value);
-	}
-
-	static _decode(value) {
-		if (value === undefined) {
-			value = '';
-		}
-		return decodeURIComponent(value);
 	}
 }
 

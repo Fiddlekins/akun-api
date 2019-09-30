@@ -3,11 +3,10 @@ import {ChapterNode, ChatNode, ChoiceNode, ReaderPostNode} from '../nodes/index.
 import ChatClient from './ChatClient.js';
 
 class StoryClient extends ChatClient {
-	constructor(akun, id) {
-		super(akun, id);
-		this._nameMeta = `node-${id}`;
-		this._nameStory = `anonkun-chapters-${id}`;
-		this._metaData = null;
+	constructor(akun, nodeData) {
+		super(akun, nodeData);
+		this._nameMeta = `node-${this._id}`;
+		this._nameStory = `anonkun-chapters-${this._id}`;
 		this._historyStory = new History();
 	}
 
@@ -27,72 +26,116 @@ class StoryClient extends ChatClient {
 		return this._metaData;
 	}
 
-	post(body) {
-		let replyObject;
-		if (this._historyStory.size) {
-			const replyNode = this._historyStory.last();
-			if (replyNode) {
-				replyObject = {};
-				replyObject['_id'] = replyNode.data['_id'];
-				replyObject['b'] = replyNode.data['b'];
-				replyObject['hide'] = true;
-			}
-		}
-		return this._post(body, replyObject);
+	async init() {
+		// Do both in parallel
+		await Promise.all([
+			super.init(),
+			(async () => {
+				const story = await this._akun.get(`/api/anonkun/chapters/${this._id}/${this.latestChapter()['ct']}/9999999999999998`);
+				for (const nodeData of story) {
+					this.newMessage(nodeData, false);
+				}
+			})()
+		]);
 	}
 
 	newMetaData(data) {
 		this._metaData = data;
 	}
 
-	newMessage(data) {
+	newMessage(data, notify = true) {
 		const nodeType = data['nt'];
 		switch (nodeType) {
 			case 'chat':
-				this._onChat(new ChatNode(data));
+				this._onChat(new ChatNode(data), notify);
 				break;
 			case 'chapter':
-				this._onChapter(new ChapterNode(data));
+				this._onChapter(new ChapterNode(data), notify);
 				break;
 			case 'choice':
-				this._onChoice(new ChoiceNode(data));
+				this._onChoice(new ChoiceNode(data), notify);
 				break;
 			case 'readerPost':
-				this._onReaderPost(new ReaderPostNode(data));
+				this._onReaderPost(new ReaderPostNode(data), notify);
 				break;
 			default:
 				throw new Error(`StoryClient received unrecognised nodeType '${nodeType}':\n${data}`);
 		}
 	}
 
-	_onChapter(node) {
-		if (this._historyStory.has(node)) {
+	latestChapter() {
+		const nonAppendices = this._metaData['bm'].filter((chapter) => {
+			return !StoryClient._isAppendix(chapter['title']);
+		});
+		return nonAppendices[nonAppendices.length - 1];
+	}
+
+	static _isAppendix(title) {
+		return title.startsWith('#special ');
+	}
+
+	_onChapter(node, notify) {
+		if (this._historyStory.has(node) || !this._historyStory.last() || (this._historyStory.last().createdTime - node.createdTime >= this._newVsEditThreshold)) {
 			this._historyStory.update(node);
-			this.emit('chapterUpdated', node);
+			if (notify) {
+				this.emit('chapterUpdated', node);
+			}
 		} else {
 			this._historyStory.add(node);
-			this.emit('chapter', node);
+			if (notify) {
+				this.emit('chapter', node);
+			}
 		}
 	}
 
-	_onChoice(node) {
-		if (this._historyStory.has(node)) {
+	_onChoice(node, notify) {
+		if (this._historyStory.has(node) || !this._historyStory.last() || (this._historyStory.last().createdTime - node.createdTime >= this._newVsEditThreshold)) {
 			this._historyStory.update(node);
-			this.emit('choiceUpdated', node);
+			if (notify) {
+				this.emit('choiceUpdated', node);
+			}
 		} else {
 			this._historyStory.add(node);
-			this.emit('choice', node);
+			if (notify) {
+				this.emit('choice', node);
+			}
 		}
 	}
 
-	_onReaderPost(node) {
-		if (this._historyStory.has(node)) {
+	_onReaderPost(node, notify) {
+		if (this._historyStory.has(node) || !this._historyStory.last() || (this._historyStory.last().createdTime - node.createdTime >= this._newVsEditThreshold)) {
 			this._historyStory.update(node);
-			this.emit('readerPostUpdated', node);
+			if (notify) {
+				this.emit('readerPostUpdated', node);
+			}
 		} else {
 			this._historyStory.add(node);
-			this.emit('readerPost', node);
+			if (notify) {
+				this.emit('readerPost', node);
+			}
 		}
+	}
+
+	_post(body, replyObject) {
+		const postData = {
+			'r': [this._id],
+			'nt': 'chat',
+			'b': body
+		};
+		const lastChapterNode = this._historyStory.last();
+		if (lastChapterNode) {
+			const chapterReplyObject = {};
+			chapterReplyObject['_id'] = lastChapterNode.data['_id'];
+			chapterReplyObject['b'] = lastChapterNode.data['b'];
+			chapterReplyObject['hide'] = true;
+			postData['r'].push(chapterReplyObject['_id']);
+			postData['ra'] = chapterReplyObject;
+		}
+		if (replyObject) {
+			postData['r'].push(replyObject['_id']);
+			postData['ra'] = replyObject;
+		}
+		return this._akun.core.post('/api/storyChat', postData);
 	}
 }
 

@@ -18,6 +18,10 @@ class RealTimeConnection {
 		this._boundOnMessage = this._onMessage.bind(this);
 	}
 
+	get active() {
+		return this._active;
+	}
+
 	destroy() {
 		this._active = false;
 		this._connecting = false;
@@ -26,13 +30,13 @@ class RealTimeConnection {
 			this._ws.off('close', this._boundOnClose);
 			this._ws.off('error', this._boundOnError);
 			this._ws.off('message', this._boundOnMessage);
-			this._ws.close();
+			try {
+				this._ws.close();
+			} catch (err) {
+				console.warn(`Warning: websocket encountered an error whilst closing:\n${err}`)
+			}
 		}
 		this._akun = null;
-	}
-
-	get active() {
-		return this._active;
 	}
 
 	connect() {
