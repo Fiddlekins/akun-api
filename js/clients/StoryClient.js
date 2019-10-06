@@ -1,141 +1,142 @@
-import History from '../History.js';
-import {ChapterNode, ChatNode, ChoiceNode, ReaderPostNode} from '../nodes/index.js';
-import ChatClient from './ChatClient.js';
+import cloneDeep from '../cloneDeep.js';
+import {ChatThread, StoryThread} from '../threads/index.js';
 
-class StoryClient extends ChatClient {
+class StoryClient {
 	constructor(akun, nodeData) {
-		super(akun, nodeData);
-		this._nameMeta = `node-${this._id}`;
-		this._nameStory = `anonkun-chapters-${this._id}`;
-		this._historyStory = new History();
+		this._akun = akun;
+		this._id = nodeData['_id'];
+		this._storyThread = new StoryThread(akun, nodeData);
+		this._chatThread = new ChatThread(akun, nodeData);
 	}
 
-	get nameMeta() {
-		return this._nameMeta;
+	get id() {
+		return this._id;
 	}
 
-	get nameStory() {
-		return this._nameStory;
+	get storyThread() {
+		return this._storyThread;
 	}
 
-	get historyStory() {
-		return this._historyStory;
+	get chatThread() {
+		return this._chatThread;
 	}
 
-	get metaData() {
-		return this._metaData;
-	}
-
-	async init() {
-		// Do both in parallel
-		await Promise.all([
-			super.init(),
-			(async () => {
-				const story = await this._akun.get(`/api/anonkun/chapters/${this._id}/${this.latestChapter()['ct']}/9999999999999998`);
-				for (const nodeData of story) {
-					this.newMessage(nodeData, false);
-				}
-			})()
+	init() {
+		return Promise.all([
+			this._storyThread.init(),
+			this._chatThread.init()
 		]);
 	}
 
-	newMetaData(data) {
-		this._metaData = data;
+	destroy() {
+		this._storyThread.destroy();
+		this._chatThread.destroy();
+		this._akun.clients.delete(this._id);
 	}
 
-	newMessage(data, notify = true) {
-		const nodeType = data['nt'];
-		switch (nodeType) {
-			case 'chat':
-				this._onChat(new ChatNode(data), notify);
-				break;
-			case 'chapter':
-				this._onChapter(new ChapterNode(data), notify);
-				break;
-			case 'choice':
-				this._onChoice(new ChoiceNode(data), notify);
-				break;
-			case 'readerPost':
-				this._onReaderPost(new ReaderPostNode(data), notify);
-				break;
-			default:
-				throw new Error(`StoryClient received unrecognised nodeType '${nodeType}':\n${data}`);
-		}
-	}
-
-	latestChapter() {
-		const nonAppendices = this._metaData['bm'].filter((chapter) => {
-			return !StoryClient._isAppendix(chapter['title']);
-		});
-		return nonAppendices[nonAppendices.length - 1];
-	}
-
-	static _isAppendix(title) {
-		return title.startsWith('#special ');
-	}
-
-	_onChapter(node, notify) {
-		if (this._historyStory.has(node) || !this._historyStory.last() || (this._historyStory.last().createdTime - node.createdTime >= this._newVsEditThreshold)) {
-			this._historyStory.update(node);
-			if (notify) {
-				this.emit('chapterUpdated', node);
-			}
-		} else {
-			this._historyStory.add(node);
-			if (notify) {
-				this.emit('chapter', node);
-			}
-		}
-	}
-
-	_onChoice(node, notify) {
-		if (this._historyStory.has(node) || !this._historyStory.last() || (this._historyStory.last().createdTime - node.createdTime >= this._newVsEditThreshold)) {
-			this._historyStory.update(node);
-			if (notify) {
-				this.emit('choiceUpdated', node);
-			}
-		} else {
-			this._historyStory.add(node);
-			if (notify) {
-				this.emit('choice', node);
-			}
-		}
-	}
-
-	_onReaderPost(node, notify) {
-		if (this._historyStory.has(node) || !this._historyStory.last() || (this._historyStory.last().createdTime - node.createdTime >= this._newVsEditThreshold)) {
-			this._historyStory.update(node);
-			if (notify) {
-				this.emit('readerPostUpdated', node);
-			}
-		} else {
-			this._historyStory.add(node);
-			if (notify) {
-				this.emit('readerPost', node);
-			}
-		}
-	}
-
-	_post(body, replyObject) {
+	postChat(body, replyObject) {
 		const postData = {
 			'r': [this._id],
 			'nt': 'chat',
 			'b': body
 		};
-		const lastChapterNode = this._historyStory.last();
-		if (lastChapterNode) {
-			const chapterReplyObject = {};
-			chapterReplyObject['_id'] = lastChapterNode.data['_id'];
-			chapterReplyObject['b'] = lastChapterNode.data['b'];
-			chapterReplyObject['hide'] = true;
-			postData['r'].push(chapterReplyObject['_id']);
-			postData['ra'] = chapterReplyObject;
+		const latestStoryNode = this._storyThread.latestNode(true);
+		if (latestStoryNode) {
+			postData['r'].push(latestStoryNode.data['_id']);
+			postData['ra'] = {
+				'_id': latestStoryNode.data['_id'],
+				'b': latestStoryNode.data['b'],
+				'hide': true
+			};
 		}
 		if (replyObject) {
 			postData['r'].push(replyObject['_id']);
 			postData['ra'] = replyObject;
 		}
 		return this._akun.core.post('/api/storyChat', postData);
+	}
+
+	async reply(body, replyId) {
+		let replyObject;
+		let replyNode = this._chatThread.history.get(replyId);
+		if (!replyNode) {
+			replyNode = await this._akun.getNode(replyId);
+		}
+		if (replyNode) {
+			replyObject = {
+				'_id': replyNode.data['_id'],
+				'b': replyNode.data['b'],
+				'hide': replyNode.data['hide']
+			};
+			replyObject['_id'] = replyNode.data['_id'];
+			replyObject['b'] = replyNode.data['b'];
+			replyObject['hide'] = replyNode.data['hide'];
+		}
+		return this.postChat(body, replyObject);
+	}
+
+	postChapter(body) {
+		const postData = {
+			'sid': this._id,
+			'nt': 'chapter',
+			'b': body
+		};
+		return Promise.all([
+			this._akun.core.post('/api/anonkun/chapter', postData),
+			this._postPostsAChapter()
+		]);
+	}
+
+	postChoice(config, inStory = true) {
+		const { choices, custom, multiple } = config;
+		const postData = {
+			'choices': choices,
+			'nt': 'choice',
+			'o': choices.length,
+			'custom': custom || false,
+			'multiple': multiple || false
+		};
+		if (inStory) {
+			postData['sid'] = this._id;
+			return Promise.all([
+				this._akun.core.post('/api/anonkun/chapter', postData),
+				this._postPostsAChapter()
+			]);
+		} else {
+			return this._akun.core.post('/api/node', postData);
+		}
+	}
+
+	postReaderChoice() {
+		return this._akun.core.post('/api/anonkun/chapter', {
+			'nt': 'readerPost',
+			'sid': this._id
+		});
+	}
+
+	async publish(safe = true) {
+		// Safe mode ensures the metaData isn't stale by fetching the current from the server
+		const nodeData = safe ? await this._akun.getNodeData(this._id) : cloneDeep(this._storyThread.metaData);
+		nodeData['init'] = false;
+		nodeData['trash'] = false;
+		return this._akun.put('/api/node', nodeData);
+	}
+
+	async unpublish(safe = true) {
+		// Safe mode ensures the metaData isn't stale by fetching the current from the server
+		const nodeData = safe ? await this._akun.getNodeData(this._id) : cloneDeep(this._storyThread.metaData);
+		nodeData['trash'] = true;
+		return this._akun.put('/api/node', nodeData);
+	}
+
+	_postPostsAChapter() {
+		const postData = {
+			'r': [this._id],
+			'nt': 'chat',
+			'pac': true,
+			'b': 'posts a chapter'
+		};
+		return this._akun.core.post('/api/node', postData);
 	}
 }
 

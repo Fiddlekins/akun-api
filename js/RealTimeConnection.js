@@ -6,16 +6,16 @@ class RealTimeConnection {
 		this._hostname = settings.hostname;
 		this._active = false;
 		this._connecting = false;
-		this._clients = {};
-		this._pendingClients = [];
+		this._queuedMessages = [];
 		this._ws = null;
-		this._channelNameToClientIdMap = new Map();
+		this._channelNameToListenersMap = new Map();
 		this._cid = 1;
 
 		this._boundOnOpen = this._onOpen.bind(this);
 		this._boundOnClose = this._onClose.bind(this);
 		this._boundOnError = this._onError.bind(this);
 		this._boundOnMessage = this._onMessage.bind(this);
+
 	}
 
 	get active() {
@@ -25,6 +25,11 @@ class RealTimeConnection {
 	destroy() {
 		this._active = false;
 		this._connecting = false;
+		this._close();
+		this._akun = null;
+	}
+
+	_close() {
 		if (this._ws) {
 			this._ws.off('open', this._boundOnOpen);
 			this._ws.off('close', this._boundOnClose);
@@ -36,7 +41,6 @@ class RealTimeConnection {
 				console.warn(`Warning: websocket encountered an error whilst closing:\n${err}`)
 			}
 		}
-		this._akun = null;
 	}
 
 	connect() {
@@ -50,19 +54,36 @@ class RealTimeConnection {
 		}
 	}
 
-	addClient(client) {
-		if (this._active) {
-			this._clients[client.id] = client;
-			this._subscribeClient(client);
+	refresh() {
+		this._close();
+		this._active = false;
+		this._connecting = false;
+		this._cid = 1;
+		this.connect();
+	}
+
+	subscribe(channelName, listener) {
+		if (this._channelNameToListenersMap.has(channelName)) {
+			this._channelNameToListenersMap.get(channelName).add(listener);
 		} else {
-			this._pendingClients.push(client);
-			this.connect();
+			const listeners = new Set();
+			listeners.add(listener);
+			this._channelNameToListenersMap.set(channelName, listeners);
+			this._subscribe(channelName);
 		}
 	}
 
-	removeClient(client) {
-		delete this._clients[client.id];
+	unsubscribe(channelName, listener) {
+		if (this._channelNameToListenersMap.has(channelName)) {
+			const listeners = this._channelNameToListenersMap.get(channelName);
+			listeners.delete(listener);
+			if (!listeners.size) {
+				this._unsubscribe(channelName);
+				this._channelNameToListenersMap.delete(channelName);
+			}
+		}
 	}
+
 
 	_onOpen() {
 		// console.log(`Connection opened!`);
@@ -72,7 +93,7 @@ class RealTimeConnection {
 			'data': {
 				'authToken': null
 			}
-		});
+		}, false);
 	}
 
 	_onClose() {
@@ -122,84 +143,54 @@ class RealTimeConnection {
 		}
 	}
 
+	_sendHeartbeat() {
+		this._send('#2');
+	}
+
 	_onConnectionEstablished(message) {
 		this._active = true;
-		this._pendingClients.forEach(client => this.addClient(client));
-		this._pendingClients.length = 0;
+		if (this._akun.loggedIn) {
+			this._login();
+		}
+		this._queuedMessages.forEach(data => this._sendMessage(data));
+		this._queuedMessages.length = 0;
+		this._channelNameToListenersMap.forEach((listeners, channelName) => {
+			this._subscribe(channelName);
+		})
 	}
 
 	_onPublish(data) {
-		switch (data['data'] && data['data']['event']) {
-			case 'changed':
-				this._onChanged(data);
-				break;
-			case 'childChanged':
-				this._onChildChanged(data);
-				break;
-			case 'updateUsersCount':
-				this._onUpdateUsersCount(data);
-				break;
-			default:
-				throw new Error(`Connection received unrecognised data: ${JSON.stringify(data)}`);
-		}
-	}
-
-	_onChanged(data) {
 		const channelName = data['channel'];
-		const clientId = this._channelNameToClientIdMap.get(channelName);
-		this._clients[clientId].newMetaData(data['data']['message']);
-	}
-
-	_onChildChanged(data) {
-		const channelName = data['channel'];
-		const clientId = this._channelNameToClientIdMap.get(channelName);
-		this._clients[clientId].newMessage(data['data']['message']);
-	}
-
-	_onUpdateUsersCount(data) {
-		const channelName = data['channel'];
-		const clientId = this._channelNameToClientIdMap.get(channelName);
-		this._clients[clientId].updateUsersCount(data['data']['message']['count']);
+		const listeners = this._channelNameToListenersMap.get(channelName);
+		listeners.forEach((listener) => {
+			listener(data['data']);
+		});
 	}
 
 	_onDisconnect(data) {
 		throw new Error(`Connection disconnected with error code: ${data.code}`);
 	}
 
-	_send(dataString) {
-		this._ws.send(dataString);
+	_sendMessage(data, queueIfInactive = true) {
+		if (this._active || !queueIfInactive) {
+			data['cid'] = this._cid;
+			this._cid++;
+			const dataString = JSON.stringify(data);
+			// console.log(`Connection sent message: ${dataString}`);
+			this._send(dataString);
+		} else {
+			this._queuedMessages.push(data);
+		}
 	}
 
-	_sendMessage(data) {
-		data['cid'] = this._cid;
-		this._cid++;
-		const dataString = JSON.stringify(data);
-		// console.log(`Connection sent message: ${dataString}`);
-		this._send(dataString);
-	}
-
-	_sendHeartbeat() {
-		this._send('#2');
-	}
-
-	_subscribeClient(client) {
-		const nameChat = client.nameChat;
-		const nameMeta = client.nameMeta;
-		const nameStory = client.nameStory;
-
-		this._channelNameToClientIdMap.set(nameChat, client.id);
-		this._subscribe(nameChat);
-		if (nameMeta) {
-			this._channelNameToClientIdMap.set(nameMeta, client.id);
-			this._subscribe(nameMeta);
-		}
-		if (nameStory) {
-			this._channelNameToClientIdMap.set(nameStory, client.id);
-			this._subscribe(nameStory);
-		}
-		if (this._akun.loggedIn) {
-			this._login();
-		}
+	_login() {
+		this._sendMessage({
+			'event': '#login',
+			'data': {
+				'loginToken': this._akun.core.loginData['loginToken'],
+				'userId': this._akun.core.loginData['_id']
+			}
+		});
 	}
 
 	_subscribe(channelName) {
@@ -211,14 +202,17 @@ class RealTimeConnection {
 		});
 	}
 
-	_login() {
+	_unsubscribe(channelName) {
 		this._sendMessage({
-			'event': '#login',
+			'event': '#unsubscribe',
 			'data': {
-				'loginToken': this._akun.core.loginData['loginToken'],
-				'userId': this._akun.core.loginData['_id']
+				'channel': channelName
 			}
 		});
+	}
+
+	_send(dataString) {
+		this._ws.send(dataString);
 	}
 }
 

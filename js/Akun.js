@@ -1,5 +1,6 @@
-import {ChatClient, StoryClient} from './clients/index.js';
+import {ChatClient, StoryClient} from './clients/index.js'
 import Core from './Core.js';
+import {ChapterNode, ChatNode, ChoiceNode, ReaderPostNode} from './nodes/index.js';
 import RealTimeConnection from './RealTimeConnection.js';
 
 class Akun {
@@ -9,24 +10,32 @@ class Akun {
 		if (this._settings.connection) {
 			this.connection = new RealTimeConnection(this, this._settings.connection);
 		}
-		this.clients = new Map();
+		this._clients = new Map();
 	}
 
 	get loggedIn() {
 		return this.core.loggedIn;
 	}
 
+	get clients() {
+		return this._clients;
+	}
+
+	get silent() {
+		return this._settings.silent === true;
+	}
+
 	destroy() {
 		if (this.connection) {
 			this.connection.destroy();
 		}
-		this.clients.forEach(client => client.destroy());
+		this._clients.forEach(client => client.destroy());
 	}
 
 	async login(username, password, shouldRefresh = true) {
 		const res = await this.core.login(username, password);
 		if (shouldRefresh && this._settings.connection) {
-			this.refreshConnection();
+			this.connection.refresh();
 		}
 		return res;
 	}
@@ -34,20 +43,25 @@ class Akun {
 	async logout(shouldRefresh = true) {
 		this.core.logout();
 		if (shouldRefresh) {
-			this.refreshConnection();
+			this.connection.refresh();
 		}
 	}
 
-	refreshConnection() {
-		if (this.connection) {
-			this.connection.destroy();
+	async join(idOrNodeData) {
+		let id;
+		let nodeData;
+		if (idOrNodeData['_id']) {
+			id = idOrNodeData['_id'];
+			nodeData = idOrNodeData;
+		} else {
+			id = idOrNodeData;
 		}
-		this.connection = new RealTimeConnection(this, this._settings.connection);
-		this.clients.forEach(client => client.refreshConnection());
-	}
-
-	async join(id) {
-		const nodeData = await this.getNode(id);
+		if (this._clients.has(id)) {
+			return this._clients.get(id);
+		}
+		if (!nodeData) {
+			nodeData = await this.getNodeData(id);
+		}
 		const nodeType = nodeData['nt'];
 		let client;
 		switch (nodeType) {
@@ -63,11 +77,8 @@ class Akun {
 			default:
 				throw new Error(`Join request to unrecognised nodeType '${nodeType}':\n${nodeData}`);
 		}
+		this._clients.set(id, client);
 		await client.init();
-		this.clients.set(id, client);
-		if (this.connection) {
-			await client.connect();
-		}
 		return client;
 	}
 
@@ -87,8 +98,25 @@ class Akun {
 		return this.core.put(...args);
 	}
 
-	getNode(id) {
+	getNodeData(id) {
 		return this.core.get(`/api/node/${id}`);
+	}
+
+	async getNode(id) {
+		const nodeData = await this.getNodeData(id);
+		const nodeType = nodeData['nt'];
+		switch (nodeType) {
+			case 'chat':
+				return new ChatNode(nodeData);
+			case 'chapter':
+				return new ChapterNode(nodeData);
+			case 'choice':
+				return new ChoiceNode(nodeData);
+			case 'readerPost':
+				return new ReaderPostNode(nodeData);
+			default:
+				throw new Error(`Unrecognised nodeType '${nodeType}':\n${JSON.stringify(nodeData, null, '\t')}`);
+		}
 	}
 
 	async setAnon(postAsAnon = true) {
@@ -99,18 +127,92 @@ class Akun {
 		await this.core.updateProfileSettings(this.core.profileSettings);
 	}
 
-	vote(id, choice) {
-		return this.core.post(`/api/anonkun/voteChapter`, {
-			_id: id,
-			vote: choice
+	createStory(title) {
+		return this.core.post(`/api/anonkun/board/item`, {
+			'nt': 'story',
+			'storyStatus': 'active',
+			'contentRating': 'teen',
+			't': title,
+			'mcOff': true,
+			'trash': true,
+			'init': true
 		});
 	}
 
-	removeVote(id, choice) {
-		return this.core.delete(`/api/anonkun/voteChapter`, {
-			_id: id,
-			vote: choice
+	vote(choiceId, choice) {
+		return this.core.post(`/api/anonkun/voteChapter`, {
+			'_id': choiceId,
+			'vote': choice
 		});
+	}
+
+	removeVote(choiceId, choice) {
+		return this.core.delete(`/api/anonkun/voteChapter`, {
+			'_id': choiceId,
+			'vote': choice
+		});
+	}
+
+	writeInChoice(choiceId, value, storyId) {
+		const postData = {
+			'value': value,
+			'_id': choiceId
+		};
+		if (storyId) {
+			// Site does this but omitting it seems to work anyway
+			postData['r'] = [storyId];
+		}
+		return this.core.post(`/api/anonkun/customChoice`, postData);
+	}
+
+	openChoice(choiceId) {
+		return this._openNode(choiceId);
+	}
+
+	closeChoice(choiceId) {
+		return this._closeNode(choiceId);
+	}
+
+	writeInReaderPost(readerPostId, value, storyId) {
+		const postData = {
+			'value': value,
+			'_id': readerPostId
+		};
+		if (storyId) {
+			// Site does this but omitting it seems to work anyway
+			postData['r'] = [storyId];
+		}
+		return this.core.post(`/api/anonkun/readerPost`, postData);
+	}
+
+	openReaderPost(readerPostId) {
+		return this._openNode(readerPostId);
+	}
+
+	closeReaderPost(readerPostId) {
+		return this._closeNode(readerPostId);
+	}
+
+	_openNode(nodeId) {
+		return this.core.post(`/api/anonkun/editChapter`, {
+			'_id': nodeId,
+			'update': {
+				'$unset': {
+					'closed': 1
+				}
+			}
+		}, false);
+	}
+
+	_closeNode(nodeId) {
+		return this.core.post(`/api/anonkun/editChapter`, {
+			'_id': nodeId,
+			'update': {
+				'$set': {
+					'closed': 'closed'
+				}
+			}
+		}, false);
 	}
 }
 
