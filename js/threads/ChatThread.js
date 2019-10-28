@@ -1,5 +1,13 @@
-import {ChatNode, ChoiceNode} from '../nodes/index.js';
+import {ChatNode, ChoiceNode, Node} from '../nodes/index.js';
 import BaseThread from './BaseThread.js';
+
+function isChat(nodeData) {
+	return nodeData['nt'] === 'chat';
+}
+
+function isChoice(nodeData) {
+	return nodeData['nt'] === 'choice';
+}
 
 class ChatThread extends BaseThread {
 	constructor(akun, nodeData) {
@@ -25,48 +33,33 @@ class ChatThread extends BaseThread {
 		super._disconnect();
 	}
 
-	_newMessage(data, notify = true) {
-		const nodeType = data['nt'];
-		switch (nodeType) {
-			case 'chat':
-				this._onChat(new ChatNode(data), notify);
-				break;
-			case 'choice':
-				this._onChoice(new ChoiceNode(data), notify);
-				break;
+	_makeNode(nodeData) {
+		switch (true) {
+			case isChat(nodeData):
+				return new ChatNode(nodeData);
+			case isChoice(nodeData):
+				return new ChoiceNode(nodeData);
 			default:
 				if (!this._akun.silent) {
-					console.warn(new Error(`ChatThread received unrecognised nodeType '${nodeType}':\n${JSON.stringify(data, null, '\t')}`));
+					console.warn(new Error(`ChatThread received unrecognised nodeType '${nodeData['nt']}':\n${JSON.stringify(nodeData, null, '\t')}`));
 				}
+				return new Node(nodeData);
 		}
 	}
 
-	_onChat(node, notify) {
-		if (this._isNodeUpdate(node)) {
-			this._history.update(node);
-			if (notify) {
-				this.emit('chatUpdated', node);
-			}
-		} else {
-			this._history.add(node);
-			if (notify) {
-				this.emit('chat', node);
-			}
+	_notifyNodeChange(node, isUpdate) {
+		let event;
+		switch (true) {
+			case isChat(node.data):
+				event = isUpdate ? 'chatUpdated' : 'chat';
+				break;
+			case isChoice(node.data):
+				event = isUpdate ? 'choiceUpdated' : 'choice';
+				break;
+			default:
+				event = isUpdate ? 'unknownUpdated' : 'unknown';
 		}
-	}
-
-	_onChoice(node, notify) {
-		if (this._isNodeUpdate(node)) {
-			this._history.update(node);
-			if (notify) {
-				this.emit('choiceUpdated', node);
-			}
-		} else {
-			this._history.add(node);
-			if (notify) {
-				this.emit('choice', node);
-			}
-		}
+		this.emit(event, node);
 	}
 }
 

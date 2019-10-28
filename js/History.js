@@ -12,68 +12,47 @@ class History {
 		return this._content.size;
 	}
 
+	get last() {
+		return this._order[this._order.length - 1];
+	}
+
+	get nodes() {
+		return this._order;
+	}
+
 	has(idOrNode) {
-		const id = typeof idOrNode === 'object' ? idOrNode.id : idOrNode;
+		const id = idOrNode.id || idOrNode;
 		return this._content.has(id);
 	}
 
 	get(idOrNode) {
-		const id = typeof idOrNode === 'object' ? idOrNode.id : idOrNode;
+		const id = idOrNode.id || idOrNode;
 		return this._content.get(id);
-	}
-
-	lastId() {
-		return this._order[this._order.length - 1];
-	}
-
-	last() {
-		const id = this.lastId();
-		return this._content.get(id);
-	}
-
-	sliceId(begin, end) {
-		return this._order.slice(begin, end);
-	}
-
-	slice(begin, end) {
-		return this.sliceId(begin, end).map(id => {
-			return this._content.get(id);
-		});
-	}
-
-	forEach(...args) {
-		return this._content.forEach(...args);
 	}
 
 	add(node) {
 		const id = node.id;
-		this._order.push(id);
+		// Most of the time we're dealing with new nodes which we can push to the front more efficiently
+		if (this._order.length && node.createdTime >= this.last.createdTime) {
+			this._order.push(node);
+		} else {
+			// Otherwise we've probably wound up loading an old node, so start from the back and work forwards, checking created time to determine insert point
+			for (let nodeIndex = 0; nodeIndex < this._order.length; nodeIndex++) {
+				if (node.createdTime < this._order[nodeIndex].createdTime) {
+					this._order.splice(nodeIndex, 0, node);
+					break;
+				}
+			}
+		}
 		this._content.set(id, node);
 		this._cull();
 	}
 
-	update(node) {
-		const id = node.id;
-		const nodeData = node.data;
-		if (this._content.has(id)) {
-			if (nodeData['updateProperties']) {
-				this._content.get(id).merge(nodeData);
-			} else {
-				this._content.get(id).replace(nodeData);
-			}
-		} else {
-			const id = node.id;
-			this._order.unshift(id);
-			this._content.set(id, node);
-			this._cull();
-		}
-	}
-
 	_cull() {
-		if (this._content.size > this._maxSize) {
+		if (this.size > this._maxSize) {
 			const cullCount = Math.floor(this._maxSize / 2);
-			const culledIds = this._order.splice(0, cullCount);
-			for (const id of culledIds) {
+			const culledNodes = this._order.splice(0, cullCount);
+			for (const { id } of culledNodes) {
 				this._content.delete(id);
 			}
 		}

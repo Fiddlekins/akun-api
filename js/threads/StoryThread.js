@@ -1,5 +1,17 @@
-import {ChapterNode, ChoiceNode, ReaderPostNode} from '../nodes/index.js';
+import {ChapterNode, ChoiceNode, Node, ReaderPostNode} from '../nodes/index.js';
 import BaseThread from './BaseThread.js'
+
+function isChapter(nodeData) {
+	return nodeData['nt'] === 'chapter';
+}
+
+function isChoice(nodeData) {
+	return nodeData['nt'] === 'choice';
+}
+
+function isReaderPost(nodeData) {
+	return nodeData['nt'] === 'readerPost';
+}
 
 class StoryThread extends BaseThread {
 	constructor(akun, nodeData) {
@@ -68,65 +80,38 @@ class StoryThread extends BaseThread {
 		super._disconnect();
 	}
 
-	_newMessage(data, notify = true) {
-		const nodeType = data['nt'];
-		switch (nodeType) {
-			case 'chapter':
-				this._onChapter(new ChapterNode(data), notify);
-				break;
-			case 'choice':
-				this._onChoice(new ChoiceNode(data), notify);
-				break;
-			case 'readerPost':
-				this._onReaderPost(new ReaderPostNode(data), notify);
-				break;
+	_makeNode(nodeData) {
+		switch (true) {
+			case isChapter(nodeData):
+				return new ChapterNode(nodeData);
+			case isChoice(nodeData):
+				return new ChoiceNode(nodeData);
+			case isReaderPost(nodeData):
+				return new ReaderPostNode(nodeData);
 			default:
 				if (!this._akun.silent) {
-					console.warn(new Error(`StoryThread received unrecognised nodeType '${nodeType}':\n${JSON.stringify(data, null, '\t')}`));
+					console.warn(new Error(`StoryThread received unrecognised nodeType '${nodeData['nt']}':\n${JSON.stringify(nodeData, null, '\t')}`));
 				}
+				return new Node(nodeData);
 		}
 	}
 
-	_onChapter(node, notify) {
-		if (this._isNodeUpdate(node)) {
-			this._history.update(node);
-			if (notify) {
-				this.emit('chapterUpdated', node);
-			}
-		} else {
-			this._history.add(node);
-			if (notify) {
-				this.emit('chapter', node);
-			}
+	_notifyNodeChange(node, isUpdate) {
+		let event;
+		switch (true) {
+			case isChapter(node.data):
+				event = isUpdate ? 'chapterUpdated' : 'chapter';
+				break;
+			case isChoice(node.data):
+				event = isUpdate ? 'choiceUpdated' : 'choice';
+				break;
+			case isReaderPost(node.data):
+				event = isUpdate ? 'readerPostUpdated' : 'readerPost';
+				break;
+			default:
+				event = isUpdate ? 'unknownUpdated' : 'unknown';
 		}
-	}
-
-	_onChoice(node, notify) {
-		if (this._isNodeUpdate(node)) {
-			this._history.update(node);
-			if (notify) {
-				this.emit('choiceUpdated', node);
-			}
-		} else {
-			this._history.add(node);
-			if (notify) {
-				this.emit('choice', node);
-			}
-		}
-	}
-
-	_onReaderPost(node, notify) {
-		if (this._isNodeUpdate(node)) {
-			this._history.update(node);
-			if (notify) {
-				this.emit('readerPostUpdated', node);
-			}
-		} else {
-			this._history.add(node);
-			if (notify) {
-				this.emit('readerPost', node);
-			}
-		}
+		this.emit(event, node);
 	}
 }
 

@@ -1,5 +1,6 @@
 import events from 'events';
 import History from '../History.js';
+import {Node} from '../nodes/index.js';
 
 class BaseThread extends events.EventEmitter {
 	constructor(akun, nodeData) {
@@ -94,13 +95,48 @@ class BaseThread extends events.EventEmitter {
 		this._metaData = data;
 	}
 
-	_newMessage(data, notify = true) {
-		const nodeType = data['nt'];
-		switch (nodeType) {
+	async _newMessage(data, notify = true) {
+		let nodeData = data;
+		const nodeId = nodeData['_id'];
+		const isUpdate = this._isNodeUpdate(nodeData);
+		let node = this._history.get(nodeId);
+		if (node) {
+			if (nodeData['updateProperties']) {
+				node.merge(nodeData);
+			} else {
+				node.replace(nodeData);
+			}
+		} else {
+			if (nodeData['updateProperties']) {
+				nodeData = await this._akun.getNodeData(nodeId);
+			}
+			node = this._makeNode(nodeData);
+			this._history.add(node);
+		}
+		if (notify) {
+			this._notifyNodeChange(node, isUpdate);
+		}
+	}
+
+	_makeNode(nodeData) {
+		switch (true) {
 			// Extend with type handlers
 			default:
-				throw new Error(`BaseThread received unrecognised nodeType '${nodeType}':\n${JSON.stringify(data, null, '\t')}`);
+				if (!this._akun.silent) {
+					console.warn(new Error(`BaseThread received unrecognised nodeType '${nodeData['nt']}':\n${JSON.stringify(nodeData, null, '\t')}`));
+				}
+				return new Node(nodeData);
 		}
+	}
+
+	_notifyNodeChange(node, isUpdate) {
+		let event;
+		switch (true) {
+			// Extend with type handlers
+			default:
+				event = isUpdate ? 'unknownUpdated' : 'unknown';
+		}
+		this.emit(event, node);
 	}
 
 	_updateUsersCount(usersCount) {
@@ -108,8 +144,11 @@ class BaseThread extends events.EventEmitter {
 		this.emit('usersCount', usersCount);
 	}
 
-	_isNodeUpdate(node) {
-		return this._history.has(node) || !this._history.last() || (this._history.last().createdTime - node.createdTime >= this._newVsEditThreshold);
+	_isNodeUpdate(nodeData) {
+		const nodeDeclaresItselfAnUpdate = !!nodeData['updateProperties'];
+		const historyAlreadyHasNode = this._history.has(nodeData['_id']);
+		const nodeCreationTimeSignificantlyOlderThanCurrentTime = (Date.now() - nodeData['ct']) >= this._newVsEditThreshold;
+		return nodeDeclaresItselfAnUpdate || historyAlreadyHasNode || nodeCreationTimeSignificantlyOlderThanCurrentTime;
 	}
 }
 

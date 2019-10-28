@@ -15,10 +15,10 @@ function printObject(object) {
 
 async function onChat(akun, client, chatNode) {
 	console.log(`New ChatNode:\n${chatNode}`);
-	// console.log('historyChat', client.historyChat.slice());
+	// console.log('historyChat', client.historyChat.nodes);
 	if (chatNode.body === 'peng') {
 		console.log('attempting response');
-		const res = await client.post('pung');
+		const res = await client.postChat('pung');
 		console.log(`post response: ${res}`);
 	}
 	if (chatNode.body === 'login') {
@@ -37,10 +37,10 @@ async function onChatUpdated(akun, client, chatNode) {
 
 async function onChapter(akun, client, chapterNode) {
 	console.log(`New ChapterNode:\n${chapterNode}`);
-	// console.log('historyStory', client.historyStory.slice());
+	// console.log('historyStory', client.historyStory.nodes);
 	if (chapterNode.body === '<p>ping</p>') {
 		console.log('Trying to chapter');
-		const res = await client.post('chapong');
+		const res = await client.postChat('chapong');
 		console.log(`post response: ${res}`);
 	}
 }
@@ -51,7 +51,7 @@ async function onChapterUpdated(akun, client, chapterNode) {
 
 async function onChoice(akun, client, choiceNode) {
 	console.log(`New ChoiceNode:\n${choiceNode}`);
-	// console.log('historyStory', client.historyStory.slice());
+	// console.log('historyStory', client.historyStory.nodes);
 }
 
 async function onChoiceUpdated(akun, client, choiceNode) {
@@ -60,7 +60,7 @@ async function onChoiceUpdated(akun, client, choiceNode) {
 
 async function onReaderPost(akun, client, readerPostNode) {
 	console.log(`New ReaderPostNode:\n${readerPostNode}`);
-	// console.log('historyStory', client.historyStory.slice());
+	// console.log('historyStory', client.historyStory.nodes);
 }
 
 async function onReaderPostUpdated(akun, client, readerPostNode) {
@@ -74,31 +74,31 @@ async function onSubscriptionSucceeded(data) {
 async function testStory(akun, storyId) {
 	const client = await akun.join(storyId);
 
-	client.on('chat', (node) => {
+	client.chatThread.on('chat', (node) => {
 		onChat(akun, client, node);
 	});
-	client.on('chatUpdated', (node) => {
+	client.chatThread.on('chatUpdated', (node) => {
 		onChatUpdated(akun, client, node);
 	});
-	client.on('chapter', (node) => {
+	client.storyThread.on('chapter', (node) => {
 		onChapter(akun, client, node);
 	});
-	client.on('chapterUpdated', (node) => {
+	client.storyThread.on('chapterUpdated', (node) => {
 		onChapterUpdated(akun, client, node);
 	});
-	client.on('choice', (node) => {
+	client.storyThread.on('choice', (node) => {
 		onChoice(akun, client, node);
 	});
-	client.on('choiceUpdated', (node) => {
+	client.storyThread.on('choiceUpdated', (node) => {
 		onChoiceUpdated(akun, client, node);
 	});
-	client.on('readerPost', (node) => {
+	client.storyThread.on('readerPost', (node) => {
 		onReaderPost(akun, client, node);
 	});
-	client.on('readerPostUpdated', (node) => {
+	client.storyThread.on('readerPostUpdated', (node) => {
 		onReaderPostUpdated(akun, client, node);
 	});
-	client.on('subscriptionSucceeded', onSubscriptionSucceeded);
+	client.storyThread.on('subscriptionSucceeded', onSubscriptionSucceeded);
 
 	// const resTestPost1 = await client.post('Test post 1');
 	// console.log(`post response: ${resTestPost1}`);
@@ -110,15 +110,15 @@ async function testStory(akun, storyId) {
 	// console.log(`post response: ${resTestPost2}`);
 
 	// console.log(client.latestChapter());
-	// client.historyChat.forEach((node) => {
+	// client.historyChat.nodes.forEach((node) => {
 	// 	console.log(node.toString())
 	// });
-	// client.historyStory.forEach((node) => {
+	// client.historyStory.nodes.forEach((node) => {
 	// 	console.log(node.toString())
 	// });
 
 	return new Promise(res => {
-		client.on('chat', (node) => {
+		client.storyThread.on('chat', (node) => {
 			if (node.body === 'exit') {
 				res();
 			}
@@ -153,7 +153,7 @@ async function testChat(akun, chatId) {
 	// console.log(`post response: ${JSON.stringify(resTestPost2, null, '\t')}`);
 
 	return new Promise(res => {
-		client.on('chat', (node) => {
+		client.chatThread.on('chat', (node) => {
 			if (node.body === 'exit') {
 				res();
 			}
@@ -193,7 +193,7 @@ async function testPost(akun, chatId) {
 async function runTests(akun) {
 	// await testAnonToggle(akun, 'vhHhMfskRnNDbxwzo');
 	// await testPost(akun, 'vhHhMfskRnNDbxwzo');
-	// await testStory(akun, 'vhHhMfskRnNDbxwzo');
+	await testStory(akun, 'vhHhMfskRnNDbxwzo');
 	// await testChat(akun, 'oQ2fkvRS4nxjLfSmA');
 	// await testChat(akun, 'oWC3WhFDMXqZkAG69');
 	// await testPut(akun, 'vhHhMfskRnNDbxwzo');
