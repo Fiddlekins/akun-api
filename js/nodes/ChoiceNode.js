@@ -22,21 +22,21 @@ import Node from './Node.js';
 
 /**
  * @typedef {nodes#nodeData} AkunAPI.nodes#choice
- * @property {number} voteId - The vote ID, aka the choices array index
+ * @property {number} choiceId - The choice ID, aka the choiceValues array index
  * @property {number} count - The number of votes for this choice
- * @property {string} choice - What the choice actually is
+ * @property {string} value - What the choice actually is
  * @property {boolean} [xOut] - Whether the choice was crossed out
  * @property {string} [xOutReason] - What the reason for being crossed out is if one was given
  */
 
 /**
- * Sorts a list of votes into descending order by vote count
+ * Sorts a list of choices into descending order by vote count
  *
  * @param {AkunAPI.nodes#choice} a - One of the votes to compare
  * @param {AkunAPI.nodes#choice} b - One of the votes to compare
  * @returns {number}
  */
-function voteSortFunction(a, b) {
+function choiceSortFunction(a, b) {
 	return a.count - b.count;
 }
 
@@ -46,7 +46,7 @@ function voteSortFunction(a, b) {
  * @param {AkunAPI.nodes#choice} vote - The vote to check
  * @returns {boolean}
  */
-function isVoteValid(vote) {
+function isChoiceValid(vote) {
 	return !vote.xOut;
 }
 
@@ -66,13 +66,13 @@ class ChoiceNode extends Node {
 		this._voteCounts = null;
 
 		/** @type {?Array.<AkunAPI.nodes#choice>} */
-		this._votes = null;
+		this._choices = null;
 
 		/** @type {?Array.<AkunAPI.nodes#choice>} */
-		this._votesWinning = null;
+		this._choicesWinning = null;
 
 		/** @type {?Array.<AkunAPI.nodes#choice>} */
-		this._voteLosing = null;
+		this._choicesLosing = null;
 	}
 
 	/**
@@ -81,7 +81,7 @@ class ChoiceNode extends Node {
 	 * @member {Array.<string>}
 	 * @readonly
 	 */
-	get choices() {
+	get choiceValues() {
 		return this._internal['choices'];
 	}
 
@@ -116,7 +116,7 @@ class ChoiceNode extends Node {
 	}
 
 	/**
-	 * A list of vote counts. This and the choices array match choice index
+	 * A list of vote counts. This and the choiceValues array match choice index
 	 *
 	 * @member {Array.<number>}
 	 * @readonly
@@ -129,16 +129,16 @@ class ChoiceNode extends Node {
 	}
 
 	/**
-	 * A sorted list of votes.
+	 * A list of choices sorted by vote count.
 	 *
 	 * @member {Array.<AkunAPI.nodes#choice>}
 	 * @readonly
 	 */
-	get votes() {
-		if (!this._votes) {
+	get choices() {
+		if (!this._choices) {
 			this._sortVotes();
 		}
-		return this._votes;
+		return this._choices;
 	}
 
 	/**
@@ -149,21 +149,21 @@ class ChoiceNode extends Node {
 	 * @member {Array.<AkunAPI.nodes#choice>}
 	 * @readonly
 	 */
-	get votesWinning() {
-		if (!this._votesWinning) {
-			const validVotes = this.votes.filter(isVoteValid);
-			if (validVotes.length) {
-				const highestVoteCount = validVotes.reduce((acc, curr) => {
+	get choicesWinning() {
+		if (!this._choicesWinning) {
+			const validChoices = this.choices.filter(isChoiceValid);
+			if (validChoices.length) {
+				const highestVoteCount = validChoices.reduce((acc, curr) => {
 					return Math.max(acc, curr.count);
 				}, 0);
-				this._votesWinning = validVotes.filter((vote) => {
-					return vote.count === highestVoteCount;
+				this._choicesWinning = validChoices.filter((choice) => {
+					return choice.count === highestVoteCount;
 				});
 			} else {
-				this._votesWinning = [];
+				this._choicesWinning = [];
 			}
 		}
-		return this._votesWinning;
+		return this._choicesWinning;
 	}
 
 	/**
@@ -174,21 +174,21 @@ class ChoiceNode extends Node {
 	 * @member {Array.<AkunAPI.nodes#choice>}
 	 * @readonly
 	 */
-	get votesLosing() {
-		if (!this._voteLosing) {
-			const validVotes = this.votes.filter(isVoteValid);
-			if (validVotes.length) {
-				const lowestVoteCount = validVotes.reduce((acc, curr) => {
+	get choicesLosing() {
+		if (!this._choicesLosing) {
+			const validChoices = this.choices.filter(isChoiceValid);
+			if (validChoices.length) {
+				const lowestVoteCount = validChoices.reduce((acc, curr) => {
 					return Math.min(acc, curr.count);
 				}, 0);
-				this._voteLosing = validVotes.filter((vote) => {
-					return vote.count === lowestVoteCount;
+				this._choicesLosing = validChoices.filter((choice) => {
+					return choice.count === lowestVoteCount;
 				});
 			} else {
-				this._voteLosing = [];
+				this._choicesLosing = [];
 			}
 		}
-		return this._voteLosing;
+		return this._choicesLosing;
 	}
 
 	/**
@@ -199,9 +199,9 @@ class ChoiceNode extends Node {
 	_init() {
 		super._init();
 		this._voteCounts = null;
-		this._votes = null;
-		this._votesWinning = null;
-		this._voteLosing = null;
+		this._choices = null;
+		this._choicesWinning = null;
+		this._choicesLosing = null;
 	}
 
 	/**
@@ -224,27 +224,27 @@ class ChoiceNode extends Node {
 		this._voteCounts.fill(0);
 		for (const voter of Object.keys(votes)) {
 			if (this.multiple) {
-				for (const voteId of votes[voter]) {
-					this._incrementVote(voteId);
+				for (const choiceId of votes[voter]) {
+					this._incrementVote(choiceId);
 				}
 			} else {
-				const voteId = votes[voter];
-				this._incrementVote(voteId);
+				const choiceId = votes[voter];
+				this._incrementVote(choiceId);
 			}
 		}
 	}
 
 	/**
-	 * Validates the given voteID and increments the corresponding vote count
+	 * Validates the given choiceId and increments the corresponding vote count
 	 *
-	 * @param {number} voteId - The vote ID is the index of the vote in the choices array
+	 * @param {number} choiceId - The vote ID is the index of the vote in the choices array
 	 * @private
 	 */
-	_incrementVote(voteId) {
-		// voteId can be null or a number but that number isn't guaranteed to match an index of an entry in the choices array
+	_incrementVote(choiceId) {
+		// choiceId can be null or a number but that number isn't guaranteed to match an index of an entry in the choices array
 		// votes is a non-holey array set to match the length of choices and filled with 0
-		if (this._voteCounts[voteId] || this._voteCounts[voteId] === 0) {
-			this._voteCounts[voteId]++;
+		if (this._voteCounts[choiceId] || this._voteCounts[choiceId] === 0) {
+			this._voteCounts[choiceId]++;
 		}
 	}
 
@@ -254,25 +254,25 @@ class ChoiceNode extends Node {
 	 * @private
 	 */
 	_sortVotes() {
-		this._votes = [];
+		this._choices = [];
 		const voteCounts = this.voteCounts;
 		const xOut = this._internal['xOut'];
 		const xOutReasons = this._internal['xOutReasons'];
-		for (let voteId = 0; voteId < voteCounts.length; voteId++) {
-			const vote = {
-				voteId,
-				count: voteCounts[voteId],
-				choice: this.choices[voteId]
+		for (let choiceId = 0; choiceId < voteCounts.length; choiceId++) {
+			const choice = {
+				choiceId,
+				count: voteCounts[choiceId],
+				value: this.choiceValues[choiceId]
 			};
-			if (xOut && xOut.includes(`${voteId}`)) {
-				vote.xOut = true;
-				if (xOutReasons && xOutReasons[voteId]) {
-					vote.xOutReason = xOutReasons[voteId];
+			if (xOut && xOut.includes(`${choiceId}`)) {
+				choice.xOut = true;
+				if (xOutReasons && xOutReasons[choiceId]) {
+					choice.xOutReason = xOutReasons[choiceId];
 				}
 			}
-			this._votes.push(vote);
+			this._choices.push(choice);
 		}
-		this._votes.sort(voteSortFunction);
+		this._choices.sort(choiceSortFunction);
 	}
 }
 

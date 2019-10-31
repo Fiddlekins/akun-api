@@ -139,24 +139,24 @@ class Akun {
 		});
 	}
 
-	vote(choiceId, choice) {
+	vote(choiceNodeId, choiceId) {
 		return this.core.post(`/api/anonkun/voteChapter`, {
-			'_id': choiceId,
-			'vote': choice
+			'_id': choiceNodeId,
+			'vote': choiceId
 		});
 	}
 
-	removeVote(choiceId, choice) {
+	removeVote(choiceNodeId, choiceId) {
 		return this.core.delete(`/api/anonkun/voteChapter`, {
-			'_id': choiceId,
-			'vote': choice
+			'_id': choiceNodeId,
+			'vote': choiceId
 		});
 	}
 
-	writeInChoice(choiceId, value, storyId) {
+	writeInChoice(choiceNodeId, value, storyId) {
 		const postData = {
 			'value': value,
-			'_id': choiceId
+			'_id': choiceNodeId
 		};
 		if (storyId) {
 			// Site does this but omitting it seems to work anyway
@@ -165,12 +165,12 @@ class Akun {
 		return this.core.post(`/api/anonkun/customChoice`, postData);
 	}
 
-	openChoice(choiceId) {
-		return this._openNode(choiceId);
+	openChoice(choiceNodeId) {
+		return this._openNode(choiceNodeId);
 	}
 
-	closeChoice(choiceId) {
-		return this._closeNode(choiceId);
+	closeChoice(choiceNodeId) {
+		return this._closeNode(choiceNodeId);
 	}
 
 	writeInReaderPost(readerPostId, value, storyId) {
@@ -185,12 +185,12 @@ class Akun {
 		return this.core.post(`/api/anonkun/readerPost`, postData);
 	}
 
-	openReaderPost(readerPostId) {
-		return this._openNode(readerPostId);
+	openReaderPost(readerPostNodeId) {
+		return this._openNode(readerPostNodeId);
 	}
 
-	closeReaderPost(readerPostId) {
-		return this._closeNode(readerPostId);
+	closeReaderPost(readerPostNodeId) {
+		return this._closeNode(readerPostNodeId);
 	}
 
 	_openNode(nodeId) {
