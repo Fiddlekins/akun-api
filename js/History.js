@@ -32,17 +32,22 @@ class History {
 
 	add(node) {
 		const id = node.id;
-		// Most of the time we're dealing with new nodes which we can push to the front more efficiently
-		if (this._order.length && node.createdTime >= this.last.createdTime) {
-			this._order.push(node);
-		} else {
-			// Otherwise we've probably wound up loading an old node, so start from the back and work forwards, checking created time to determine insert point
-			for (let nodeIndex = 0; nodeIndex < this._order.length; nodeIndex++) {
-				if (node.createdTime < this._order[nodeIndex].createdTime) {
-					this._order.splice(nodeIndex, 0, node);
-					break;
+		if (this._order.length) {
+			// Most of the time we're dealing with new nodes which we can push to the front more efficiently
+			if (node.createdTime >= this.last.createdTime) {
+				this._order.push(node);
+			} else {
+				// Otherwise we've probably wound up loading an old node, so start from the back and work forwards, checking created time to determine insert point
+				for (let nodeIndex = 0; nodeIndex < this._order.length; nodeIndex++) {
+					if (node.createdTime < this._order[nodeIndex].createdTime) {
+						this._order.splice(nodeIndex, 0, node);
+						break;
+					}
 				}
 			}
+		} else {
+			// If this is the first node just jam it in
+			this._order.push(node);
 		}
 		this._content.set(id, node);
 		this._cull();
