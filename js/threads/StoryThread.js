@@ -56,7 +56,7 @@ class StoryThread extends BaseThread {
 			if (bookmarkCount === 0) {
 				return null;
 			}
-			const possibleNodes = this._history.slice(Math.max(this._history.size - bookmarkCount - 1, 0));
+			const possibleNodes = this._history.nodes.slice(Math.max(this._history.size - bookmarkCount - 1, 0));
 			for (let nodeIndex = possibleNodes.length - 1; nodeIndex >= 0; nodeIndex--) {
 				const node = possibleNodes[nodeIndex];
 				if (!StoryThread.isAppendix(node['title'])) {
