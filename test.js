@@ -190,14 +190,25 @@ async function testPost(akun, chatId) {
 	// console.log(await client.reply('rooply', 't2KXjRztofE5Z58uE'));
 }
 
+async function testBan(akun) {
+	let res;
+	res = await akun.login(credentials['username'], credentials['password']);
+	console.log(res);
+	res = await akun.unban('iRoYFFCDCZnB2QvEq', '53zAELYaC8RkkMpcn');
+	console.log(res);
+	res = await akun.unban('iRoYFFCDCZnB2QvEq', 'B5cqvTk3kMgRNPesr');
+	console.log(res);
+}
+
 async function runTests(akun) {
 	// await testAnonToggle(akun, 'vhHhMfskRnNDbxwzo');
 	// await testPost(akun, 'vhHhMfskRnNDbxwzo');
-	await testStory(akun, 'vhHhMfskRnNDbxwzo');
+	// await testStory(akun, 'vhHhMfskRnNDbxwzo');
 	// await testChat(akun, 'oQ2fkvRS4nxjLfSmA');
 	// await testChat(akun, 'oWC3WhFDMXqZkAG69');
 	// await testPut(akun, 'vhHhMfskRnNDbxwzo');
 	// await testVote(akun, 'TziTddJsppEfr82nh');
+	// await testBan(akun);
 }
 
 async function setup(withRealtime = true) {

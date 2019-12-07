@@ -193,6 +193,24 @@ class Akun {
 		return this._closeNode(readerPostNodeId);
 	}
 
+	ban(storyId, postId) {
+		return this.core.post(`/api/anonkun/ban`, {
+			blockFor: postId,
+			blockFrom: storyId
+		}, false);
+	}
+
+	unban(storyId, postId) {
+		return this.core.delete(`/api/anonkun/ban`, {
+			blockFor: postId,
+			blockFrom: storyId
+		}, false);
+	}
+
+	getBans(storyId) {
+		return this.core.get(`/api/anonkun/story/bans/${storyId}`);
+	}
+
 	_openNode(nodeId) {
 		return this.core.post(`/api/anonkun/editChapter`, {
 			'_id': nodeId,
