@@ -9,6 +9,10 @@ function isChoice(nodeData) {
 	return nodeData['nt'] === 'choice';
 }
 
+function isTopic(nodeData) {
+	return nodeData['nt'] === 'post';
+}
+
 class ChatThread extends BaseThread {
 	constructor(akun, nodeData) {
 		super(akun, nodeData);
@@ -33,6 +37,23 @@ class ChatThread extends BaseThread {
 		super._disconnect();
 	}
 
+	_checkBelongsInHistory(nodeData) {
+		switch (true) {
+			case isChat(nodeData):
+				return true;
+			case isChoice(nodeData):
+				return true;
+			case isTopic(nodeData):
+				// TODO handle topic node updates
+				return false;
+			default:
+				if (!this._akun.silent) {
+					console.warn(new Error(`ChatThread received unrecognised nodeType '${nodeData['nt']}':\n${JSON.stringify(nodeData, null, '\t')}`));
+				}
+				return true;
+		}
+	}
+
 	_makeNode(nodeData) {
 		switch (true) {
 			case isChat(nodeData):
@@ -40,9 +61,6 @@ class ChatThread extends BaseThread {
 			case isChoice(nodeData):
 				return new ChoiceNode(nodeData);
 			default:
-				if (!this._akun.silent) {
-					console.warn(new Error(`ChatThread received unrecognised nodeType '${nodeData['nt']}':\n${JSON.stringify(nodeData, null, '\t')}`));
-				}
 				return new Node(nodeData);
 		}
 	}

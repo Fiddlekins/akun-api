@@ -193,22 +193,30 @@ class Akun {
 		return this._closeNode(readerPostNodeId);
 	}
 
-	ban(storyId, postId) {
+	ban(storyId, chatNodeId) {
 		return this.core.post(`/api/anonkun/ban`, {
-			blockFor: postId,
+			blockFor: chatNodeId,
 			blockFrom: storyId
 		}, false);
 	}
 
-	unban(storyId, postId) {
+	unban(storyId, chatNodeId) {
 		return this.core.delete(`/api/anonkun/ban`, {
-			blockFor: postId,
+			blockFor: chatNodeId,
 			blockFrom: storyId
 		}, false);
 	}
 
 	getBans(storyId) {
 		return this.core.get(`/api/anonkun/story/bans/${storyId}`);
+	}
+
+	deleteChatNodeFromStory(storyId, chatNodeId) {
+		// Specific method name because deleting chapters and topic posts behave differently
+		return this.core.delete(`/api/anonkun/node`, {
+			deleteFrom: storyId,
+			nid: chatNodeId
+		}, false);
 	}
 
 	_openNode(nodeId) {

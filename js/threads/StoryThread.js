@@ -80,6 +80,22 @@ class StoryThread extends BaseThread {
 		super._disconnect();
 	}
 
+	_checkBelongsInHistory(nodeData) {
+		switch (true) {
+			case isChapter(nodeData):
+				return true;
+			case isChoice(nodeData):
+				return true;
+			case isReaderPost(nodeData):
+				return true;
+			default:
+				if (!this._akun.silent) {
+					console.warn(new Error(`StoryThread received unrecognised nodeType '${nodeData['nt']}':\n${JSON.stringify(nodeData, null, '\t')}`));
+				}
+				return true;
+		}
+	}
+
 	_makeNode(nodeData) {
 		switch (true) {
 			case isChapter(nodeData):
@@ -89,9 +105,6 @@ class StoryThread extends BaseThread {
 			case isReaderPost(nodeData):
 				return new ReaderPostNode(nodeData);
 			default:
-				if (!this._akun.silent) {
-					console.warn(new Error(`StoryThread received unrecognised nodeType '${nodeData['nt']}':\n${JSON.stringify(nodeData, null, '\t')}`));
-				}
 				return new Node(nodeData);
 		}
 	}

@@ -93,6 +93,16 @@ class Node {
 	}
 
 	/**
+	 * The userId of the node creator
+	 *
+	 * @member {?string}
+	 * @readonly
+	 */
+	get userId(){
+		return this._userId;
+	}
+
+	/**
 	 * The avatar of the node creator
 	 *
 	 * @member {?string}

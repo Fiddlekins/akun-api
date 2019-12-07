@@ -96,6 +96,9 @@ class BaseThread extends events.EventEmitter {
 	}
 
 	async _newMessage(data, notify = true) {
+		if (!this._checkBelongsInHistory(data)) {
+			return;
+		}
 		let nodeData = data;
 		const nodeId = nodeData['_id'];
 		const isUpdate = this._isNodeUpdate(nodeData);
@@ -118,13 +121,21 @@ class BaseThread extends events.EventEmitter {
 		}
 	}
 
-	_makeNode(nodeData) {
+	_checkBelongsInHistory(nodeData) {
 		switch (true) {
 			// Extend with type handlers
 			default:
 				if (!this._akun.silent) {
 					console.warn(new Error(`BaseThread received unrecognised nodeType '${nodeData['nt']}':\n${JSON.stringify(nodeData, null, '\t')}`));
 				}
+				return true;
+		}
+	}
+
+	_makeNode(nodeData) {
+		switch (true) {
+			// Extend with type handlers
+			default:
 				return new Node(nodeData);
 		}
 	}
