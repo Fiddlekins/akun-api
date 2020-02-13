@@ -92,7 +92,7 @@ class BaseThread extends events.EventEmitter {
 	}
 
 	_newMetaData(data) {
-		this._metaData = data;
+		this._metaData = { ...this._metaData, ...data };
 	}
 
 	async _newMessage(data, notify = true) {
