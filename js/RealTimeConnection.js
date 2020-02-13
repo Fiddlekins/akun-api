@@ -16,6 +16,7 @@ class RealTimeConnection {
 		this._boundOnError = this._onError.bind(this);
 		this._boundOnMessage = this._onMessage.bind(this);
 
+		this.connect();
 	}
 
 	get active() {
@@ -31,10 +32,10 @@ class RealTimeConnection {
 
 	_close() {
 		if (this._ws) {
-			this._ws.off('open', this._boundOnOpen);
-			this._ws.off('close', this._boundOnClose);
-			this._ws.off('error', this._boundOnError);
-			this._ws.off('message', this._boundOnMessage);
+			this._ws.removeEventListener('open', this._boundOnOpen);
+			this._ws.removeEventListener('close', this._boundOnClose);
+			this._ws.removeEventListener('error', this._boundOnError);
+			this._ws.removeEventListener('message', this._boundOnMessage);
 			try {
 				this._ws.close();
 			} catch (err) {
@@ -47,10 +48,10 @@ class RealTimeConnection {
 		if (!this._connecting && !this._active) {
 			this._connecting = true;
 			this._ws = new WebSocket(`wss://${this._hostname}/socketcluster/`);
-			this._ws.on('open', this._boundOnOpen);
-			this._ws.on('close', this._boundOnClose);
-			this._ws.on('error', this._boundOnError);
-			this._ws.on('message', this._boundOnMessage);
+			this._ws.addEventListener('open', this._boundOnOpen);
+			this._ws.addEventListener('close', this._boundOnClose);
+			this._ws.addEventListener('error', this._boundOnError);
+			this._ws.addEventListener('message', this._boundOnMessage);
 		}
 	}
 
@@ -97,14 +98,16 @@ class RealTimeConnection {
 	}
 
 	_onClose() {
+		// const { wasClean, reason, code } = e;
 		// console.log(`Connection closed.`);
 	}
 
-	_onError(err) {
-		throw new Error(`Connection experienced an error: ${err}`);
+	_onError(e) {
+		throw new Error(`Connection experienced an error: ${e.error}`);
 	}
 
-	_onMessage(rawMessage) {
+	_onMessage(e) {
+		const rawMessage = e.data;
 		// console.log(rawMessage);
 		switch (rawMessage.charAt(0)) {
 			case '#':

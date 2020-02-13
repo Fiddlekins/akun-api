@@ -1,9 +1,11 @@
+import http from 'http';
 import https from 'https';
 import qs from 'qs';
 import Cookie from './Cookie.js';
 
 class Core {
-	constructor({ hostname }) {
+	constructor({ protocol, hostname }) {
+		this._protocol = protocol || 'https:';
 		this._hostname = hostname;
 		this._cookie = new Cookie();
 		this._loginData = null;
@@ -144,12 +146,34 @@ class Core {
 		return this._request(options, putDataString, json);
 	}
 
-	_request(options, postDataString, json = false) {
+	async _request(options, postDataString, json = false) {
 		this._addCookie(options);
 		// console.log(options);
 		// console.log(postDataString);
+		if (globalThis.fetch) {
+			const { hostname, path, method, headers } = options;
+			const url = `${this._protocol}//${hostname}${path}`;
+			const init = {
+				method,
+				credentials: 'include'
+			};
+			if (headers) {
+				init.headers = headers;
+			}
+			if (postDataString) {
+				init.body = postDataString;
+			}
+			const response = await globalThis.fetch(url, init);
+			if (json) {
+				return response.json().catch(() => {
+					throw new Error('fuggg :D');
+				});
+			} else {
+				return response.text();
+			}
+		}
 		return new Promise((resolve, reject) => {
-			const request = https.request(options, response => {
+			const request = (this._protocol === 'https:' ? https : http).request(options, response => {
 				let str = '';
 
 				response.on('data', chunk => {
