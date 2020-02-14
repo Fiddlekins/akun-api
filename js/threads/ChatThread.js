@@ -25,6 +25,18 @@ class ChatThread extends BaseThread {
 		for (const nodeData of chat) {
 			this._newMessage(nodeData, false);
 		}
+		this._akun.post('/api/realtime/activesCount', { channels: [this._nameChat] }).then((res) => {
+			// If realtime connection has already updated usersCount then don't override it with this returned value
+			if (this._usersCount === null) {
+				for (const { id, count } of res) {
+					if (this._nameChat === id) {
+						this._updateUsersCount(count);
+					}
+				}
+			}
+		}).catch((err) => {
+			console.error(err);
+		});
 	}
 
 	_connect() {

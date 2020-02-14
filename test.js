@@ -35,6 +35,10 @@ async function onChatUpdated(akun, client, chatNode) {
 	console.log(`Updated ChatNode:\n${chatNode}`);
 }
 
+function onUsersCount(akun, client, usersCount) {
+	console.log(`Updated usersCount: ${usersCount}`);
+}
+
 async function onChapter(akun, client, chapterNode) {
 	console.log(`New ChapterNode:\n${chapterNode}`);
 	// console.log('historyStory', client.historyStory.nodes);
@@ -79,6 +83,9 @@ async function testStory(akun, storyId) {
 	});
 	client.chatThread.on('chatUpdated', (node) => {
 		onChatUpdated(akun, client, node);
+	});
+	client.chatThread.on('usersCount', (usersCount) => {
+		onUsersCount(akun, client, usersCount);
 	});
 	client.storyThread.on('chapter', (node) => {
 		onChapter(akun, client, node);
@@ -203,7 +210,7 @@ async function testBan(akun) {
 async function runTests(akun) {
 	// await testAnonToggle(akun, 'vhHhMfskRnNDbxwzo');
 	// await testPost(akun, 'vhHhMfskRnNDbxwzo');
-	// await testStory(akun, 'vhHhMfskRnNDbxwzo');
+	await testStory(akun, 'vhHhMfskRnNDbxwzo');
 	// await testChat(akun, 'oQ2fkvRS4nxjLfSmA');
 	// await testChat(akun, 'oWC3WhFDMXqZkAG69');
 	// await testPut(akun, 'vhHhMfskRnNDbxwzo');
