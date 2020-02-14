@@ -1,3 +1,4 @@
+import _ from 'lodash';
 import {ChatClient, StoryClient} from './clients/index.js'
 import Core from './Core.js';
 import {ChapterNode, ChatNode, ChoiceNode, ReaderPostNode} from './nodes/index.js';
@@ -128,7 +129,7 @@ class Akun {
 	}
 
 	createStory(title) {
-		return this.core.post(`/api/anonkun/board/item`, {
+		const data = {
 			'nt': 'story',
 			'storyStatus': 'active',
 			'contentRating': 'teen',
@@ -136,33 +137,36 @@ class Akun {
 			'mcOff': true,
 			'trash': true,
 			'init': true
-		});
+		};
+		return this.core.post(`/api/anonkun/board/item`, { data });
 	}
 
 	vote(choiceNodeId, choiceId) {
-		return this.core.post(`/api/anonkun/voteChapter`, {
+		const data = {
 			'_id': choiceNodeId,
 			'vote': choiceId
-		});
+		};
+		return this.core.post(`/api/anonkun/voteChapter`, { data });
 	}
 
 	removeVote(choiceNodeId, choiceId) {
-		return this.core.delete(`/api/anonkun/voteChapter`, {
+		const data = {
 			'_id': choiceNodeId,
 			'vote': choiceId
-		});
+		};
+		return this.core.delete(`/api/anonkun/voteChapter`, { data });
 	}
 
 	writeInChoice(choiceNodeId, value, storyId) {
-		const postData = {
+		const data = {
 			'value': value,
 			'_id': choiceNodeId
 		};
 		if (storyId) {
 			// Site does this but omitting it seems to work anyway
-			postData['r'] = [storyId];
+			data['r'] = [storyId];
 		}
-		return this.core.post(`/api/anonkun/customChoice`, postData);
+		return this.core.post(`/api/anonkun/customChoice`, { data });
 	}
 
 	openChoice(choiceNodeId) {
@@ -174,15 +178,15 @@ class Akun {
 	}
 
 	writeInReaderPost(readerPostId, value, storyId) {
-		const postData = {
+		const data = {
 			'value': value,
 			'_id': readerPostId
 		};
 		if (storyId) {
 			// Site does this but omitting it seems to work anyway
-			postData['r'] = [storyId];
+			data['r'] = [storyId];
 		}
-		return this.core.post(`/api/anonkun/readerPost`, postData);
+		return this.core.post(`/api/anonkun/readerPost`, { data });
 	}
 
 	openReaderPost(readerPostNodeId) {
@@ -194,17 +198,19 @@ class Akun {
 	}
 
 	ban(storyId, chatNodeId) {
-		return this.core.post(`/api/anonkun/ban`, {
+		const data = {
 			blockFor: chatNodeId,
 			blockFrom: storyId
-		}, false);
+		};
+		return this.core.post(`/api/anonkun/ban`, { data, json: false });
 	}
 
 	unban(storyId, chatNodeId) {
-		return this.core.delete(`/api/anonkun/ban`, {
+		const data = {
 			blockFor: chatNodeId,
 			blockFrom: storyId
-		}, false);
+		};
+		return this.core.delete(`/api/anonkun/ban`, { data, json: false });
 	}
 
 	getBans(storyId) {
@@ -213,32 +219,87 @@ class Akun {
 
 	deleteChatNodeFromStory(storyId, chatNodeId) {
 		// Specific method name because deleting chapters and topic posts behave differently
-		return this.core.delete(`/api/anonkun/node`, {
+		const data = {
 			deleteFrom: storyId,
 			nid: chatNodeId
-		}, false);
+		};
+		return this.core.delete(`/api/anonkun/node`, { data, json: false });
+	}
+
+	/**
+	 * Returns a list of stories
+	 *
+	 * @param {string} [board='stories'] - The board to search
+	 * @param {?number} [page=1] - Which page of results to fetch, pass in falsey value to fetch multiple pages
+	 * @param {Object} [options] - Options to configure filtering and sorting of the stories
+	 * @param {Object} [options.contentRating] - Which content rating categories should appear in results
+	 * @param {boolean} [options.contentRating.teen=true] - Teen age rating
+	 * @param {boolean} [options.contentRating.mature=true] - Mature age rating
+	 * @param {boolean} [options.contentRating.nsfw=true] - NSFW
+	 * @param {Object} [options.storyStatus] - Which story status categories should appear in the results
+	 * @param {boolean} [options.storyStatus.active=true] - On-going stories
+	 * @param {boolean} [options.storyStatus.finished=true] - Finished stories
+	 * @param {boolean} [options.storyStatus.hiatus=true] - Stories that met an untimely pause
+	 * @param {string} [options.sort] - How the results are sorted. Values can be:
+	 *   - 'Latest': "Sort by the latest activity in the story, including chat posts"
+	 *   - 'UpdatedChapter': "Sort by the latest posted chapter"
+	 *   - 'top': "Sort by the most commented stories"
+	 *   - 'new': "Show the newest stories"
+	 * @param {string} [options.length] - Filter stories by length. Values can be:
+	 *   - 'Any': No filtering
+	 *   - 'Short': "Less than 5000 words"
+	 *   - 'Medium': "More than 5000 words"
+	 *   - 'Long': "More than 30000 words"
+	 *   - 'Epic': "More than 100000+ words"
+	 * @returns {Promise<Object>}
+	 */
+	getStories(board = 'stories', page = 1, options) {
+		const query = _.merge(
+			{
+				contentRating: {
+					teen: true,
+					mature: true,
+					nsfw: true
+				},
+				storyStatus: {
+					active: true,
+					finished: true,
+					hiatus: true
+				},
+				sort: 'Latest',
+				length: 'Any'
+			},
+			options
+		);
+		if (_.isNumber(page)) {
+			return this.core.get(`/api/anonkun/board/${board}/${page}`, { query });
+		} else {
+			return this.core.get(`/api/anonkun/board/${board}`, { query });
+		}
 	}
 
 	_openNode(nodeId) {
-		return this.core.post(`/api/anonkun/editChapter`, {
+		const data = {
 			'_id': nodeId,
 			'update': {
 				'$unset': {
 					'closed': 1
 				}
 			}
-		}, false);
+		};
+		return this.core.post(`/api/anonkun/editChapter`, { data, json: false });
 	}
 
 	_closeNode(nodeId) {
-		return this.core.post(`/api/anonkun/editChapter`, {
+		const data = {
 			'_id': nodeId,
 			'update': {
 				'$set': {
 					'closed': 'closed'
 				}
 			}
-		}, false);
+		};
+		return this.core.post(`/api/anonkun/editChapter`, { data, json: false });
 	}
 }
 

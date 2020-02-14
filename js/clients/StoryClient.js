@@ -1,4 +1,5 @@
-import cloneDeep from '../cloneDeep.js';
+// import {cloneDeep} from 'lodash';
+import _ from 'lodash';
 import {ChatThread, StoryThread} from '../threads/index.js';
 
 class StoryClient {
@@ -35,25 +36,25 @@ class StoryClient {
 	}
 
 	postChat(body, replyObject) {
-		const postData = {
+		const data = {
 			'r': [this._id],
 			'nt': 'chat',
 			'b': body
 		};
 		const latestStoryNode = this._storyThread.latestNode(true);
 		if (latestStoryNode) {
-			postData['r'].push(latestStoryNode.data['_id']);
-			postData['ra'] = {
+			data['r'].push(latestStoryNode.data['_id']);
+			data['ra'] = {
 				'_id': latestStoryNode.data['_id'],
 				'b': latestStoryNode.data['b'],
 				'hide': true
 			};
 		}
 		if (replyObject) {
-			postData['r'].push(replyObject['_id']);
-			postData['ra'] = replyObject;
+			data['r'].push(replyObject['_id']);
+			data['ra'] = replyObject;
 		}
-		return this._akun.core.post('/api/storyChat', postData);
+		return this._akun.core.post('/api/storyChat', { data });
 	}
 
 	async reply(body, replyId) {
@@ -76,20 +77,20 @@ class StoryClient {
 	}
 
 	postChapter(body) {
-		const postData = {
+		const data = {
 			'sid': this._id,
 			'nt': 'chapter',
 			'b': body
 		};
 		return Promise.all([
-			this._akun.core.post('/api/anonkun/chapter', postData),
+			this._akun.core.post('/api/anonkun/chapter', { data }),
 			this._postPostsAChapter()
 		]);
 	}
 
 	postChoice(config, inStory = true) {
 		const { choices, custom, multiple } = config;
-		const postData = {
+		const data = {
 			'choices': choices,
 			'nt': 'choice',
 			'o': choices.length,
@@ -97,46 +98,47 @@ class StoryClient {
 			'multiple': multiple || false
 		};
 		if (inStory) {
-			postData['sid'] = this._id;
+			data['sid'] = this._id;
 			return Promise.all([
-				this._akun.core.post('/api/anonkun/chapter', postData),
+				this._akun.core.post('/api/anonkun/chapter', { data }),
 				this._postPostsAChapter()
 			]);
 		} else {
-			return this._akun.core.post('/api/node', postData);
+			return this._akun.core.post('/api/node', { data });
 		}
 	}
 
 	postReaderChoice() {
-		return this._akun.core.post('/api/anonkun/chapter', {
+		const data = {
 			'nt': 'readerPost',
 			'sid': this._id
-		});
+		};
+		return this._akun.core.post('/api/anonkun/chapter', { data });
 	}
 
 	async publish(safe = true) {
 		// Safe mode ensures the metaData isn't stale by fetching the current from the server
-		const nodeData = safe ? await this._akun.getNodeData(this._id) : cloneDeep(this._storyThread.metaData);
-		nodeData['init'] = false;
-		nodeData['trash'] = false;
-		return this._akun.put('/api/node', nodeData);
+		const data = safe ? await this._akun.getNodeData(this._id) : _.cloneDeep(this._storyThread.metaData);
+		data['init'] = false;
+		data['trash'] = false;
+		return this._akun.put('/api/node', { data });
 	}
 
 	async unpublish(safe = true) {
 		// Safe mode ensures the metaData isn't stale by fetching the current from the server
-		const nodeData = safe ? await this._akun.getNodeData(this._id) : cloneDeep(this._storyThread.metaData);
-		nodeData['trash'] = true;
-		return this._akun.put('/api/node', nodeData);
+		const data = safe ? await this._akun.getNodeData(this._id) : _.cloneDeep(this._storyThread.metaData);
+		data['trash'] = true;
+		return this._akun.put('/api/node', { data });
 	}
 
 	_postPostsAChapter() {
-		const postData = {
+		const data = {
 			'r': [this._id],
 			'nt': 'chat',
 			'pac': true,
 			'b': 'posts a chapter'
 		};
-		return this._akun.core.post('/api/node', postData);
+		return this._akun.core.post('/api/node', { data });
 	}
 }
 

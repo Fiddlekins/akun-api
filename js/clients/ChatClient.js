@@ -25,16 +25,16 @@ class ChatClient {
 	}
 
 	postChat(body, replyObject) {
-		const postData = {
+		const data = {
 			'r': [this._id],
 			'nt': 'chat',
 			'b': body
 		};
 		if (replyObject) {
-			postData['r'].push(replyObject['_id']);
-			postData['ra'] = replyObject;
+			data['r'].push(replyObject['_id']);
+			data['ra'] = replyObject;
 		}
-		return this._akun.core.post('/api/node', postData);
+		return this._akun.core.post('/api/node', { data });
 	}
 
 	async reply(body, replyId) {

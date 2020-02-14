@@ -51,7 +51,7 @@ class Core {
 	}
 
 	async updateSiteData() {
-		const pageString = await this.get('', false);
+		const pageString = await this.get('', { json: false });
 		const data = this._extractDataFromPage(pageString);
 		this._siteSettings = data.settings;
 		this._currentUser = data.currentUser;
@@ -59,10 +59,11 @@ class Core {
 	}
 
 	async login(username, password) {
-		const res = await this.post('/api/login', {
+		const data = {
 			'user': username,
 			'password': password
-		});
+		};
+		const res = await this.post('/api/login', { data });
 		if (res['err']) {
 			throw new Error(res['err']);
 		}
@@ -92,66 +93,92 @@ class Core {
 		if (!settings && safe) {
 			throw new Error(`Tried to update profile settings with invalid settings object, prevented as likely to cause account corruption`);
 		}
-		await this.put('/api/user', settings, false);
+		await this.put('/api/user', { data: settings, json: false });
 	}
 
-	get(path, json = true) {
-		const options = {
+	get(path, options) {
+		const { json, query } = {
+			json: true,
+			query: '',
+			...options
+		};
+		const requestOptions = {
 			hostname: this._hostname,
-			path,
+			path: query ? `${path}?${new URLSearchParams(qs.stringify(query, { arrayFormat: 'brackets' })).toString()}` : path,
 			method: 'GET'
 		};
-		return this._request(options, null, json);
+		return this._request(requestOptions, { json });
 	}
 
-	post(path, postData, json = true) {
-		const postDataString = qs.stringify(postData, { arrayFormat: 'brackets' });
-		const options = {
+	post(path, options) {
+		const { json, data } = {
+			json: true,
+			data: undefined,
+			...options
+		};
+		const body = qs.stringify(data, { arrayFormat: 'brackets' });
+		const requestOptions = {
 			hostname: this._hostname,
 			path,
 			method: 'POST',
 			headers: {
 				'content-type': 'application/x-www-form-urlencoded; charset=UTF-8',
-				'content-length': Buffer.byteLength(postDataString)
+				'content-length': Buffer.byteLength(body)
 			}
 		};
-		return this._request(options, postDataString, json);
+		return this._request(requestOptions, { json, body });
 	}
 
-	delete(path, postData, json = true) {
-		const postDataString = qs.stringify(postData, { arrayFormat: 'brackets' });
-		const options = {
+	delete(path, options) {
+		const { json, data } = {
+			json: true,
+			data: undefined,
+			...options
+		};
+		const body = qs.stringify(data, { arrayFormat: 'brackets' });
+		const requestOptions = {
 			hostname: this._hostname,
 			path,
 			method: 'DELETE',
 			headers: {
 				'content-type': 'application/x-www-form-urlencoded; charset=UTF-8',
-				'content-length': Buffer.byteLength(postDataString)
+				'content-length': Buffer.byteLength(body)
 			}
 		};
-		return this._request(options, postDataString, json);
+		return this._request(requestOptions, { json, body });
 	}
 
-	put(path, putData, json = true) {
-		const putDataString = JSON.stringify(putData);
-		const options = {
+	put(path, options) {
+		const { json, data } = {
+			json: true,
+			data: undefined,
+			...options
+		};
+		const body = JSON.stringify(data);
+		const requestOptions = {
 			hostname: this._hostname,
 			path,
 			method: 'PUT',
 			headers: {
 				'content-type': 'application/json; charset=UTF-8',
-				'content-length': Buffer.byteLength(putDataString)
+				'content-length': Buffer.byteLength(body)
 			}
 		};
-		return this._request(options, putDataString, json);
+		return this._request(requestOptions, { json, body });
 	}
 
-	async _request(options, postDataString, json = false) {
-		this._addCookie(options);
-		// console.log(options);
+	async _request(requestOptions, options) {
+		const { json, body } = {
+			json: false,
+			body: undefined,
+			...options
+		};
+		this._addCookie(requestOptions);
+		console.log(requestOptions);
 		// console.log(postDataString);
+		let requestPromise;
 		if (globalThis.fetch) {
-			const { hostname, path, method, headers } = options;
+			const { hostname, path, method, headers } = requestOptions;
 			const url = `${this._protocol}//${hostname}${path}`;
 			const init = {
 				method,
@@ -160,67 +187,63 @@ class Core {
 			if (headers) {
 				init.headers = headers;
 			}
-			if (postDataString) {
-				init.body = postDataString;
+			if (body) {
+				init.body = body;
 			}
-			const response = await globalThis.fetch(url, init);
-			if (json) {
-				return response.json().catch(() => {
-					throw new Error('fuggg :D');
+			requestPromise = globalThis.fetch(url, init).text();
+		} else {
+			requestPromise = new Promise((resolve, reject) => {
+				const request = (this._protocol === 'https:' ? https : http).request(requestOptions, response => {
+					let str = '';
+
+					response.on('data', chunk => {
+						str += chunk;
+					});
+
+					response.on('end', () => {
+						if (response.headers['set-cookie']) {
+							response.headers['set-cookie'].forEach(cookie => {
+								this._cookie.add(cookie);
+							});
+						}
+						// console.log(response.statusCode);
+						// console.log(response.statusMessage);
+						resolve(str);
+					});
 				});
-			} else {
-				return response.text();
-			}
+
+				request.on('error', reject);
+
+				if (body) {
+					request.write(body);
+				}
+				request.end();
+			});
 		}
-		return new Promise((resolve, reject) => {
-			const request = (this._protocol === 'https:' ? https : http).request(options, response => {
-				let str = '';
-
-				response.on('data', chunk => {
-					str += chunk;
-				});
-
-				response.on('end', () => {
-					if (response.headers['set-cookie']) {
-						response.headers['set-cookie'].forEach(cookie => {
-							this._cookie.add(cookie);
-						});
-					}
-					// console.log(response.statusCode);
-					// console.log(response.statusMessage);
-					if (json) {
-						try {
-							resolve(JSON.parse(str));
-						} catch (err) {
-							const errorMessage = `akun-api unable to parse response for request '${options.path}':
+		const responseText = await requestPromise;
+		if (json) {
+			try {
+				return JSON.parse(responseText);
+			} catch (err) {
+				const errorMessage = `akun-api unable to parse response for request '${requestOptions.path}':
 Response:
-${str}
+${responseText}
 
 Called with:
-${JSON.stringify(options, null, '\t')}
-${postDataString}`;
-							reject(new Error(errorMessage));
-						}
-					} else {
-						resolve(str);
-					}
-				});
-			});
-
-			request.on('error', reject);
-
-			if (postDataString) {
-				request.write(postDataString);
+${JSON.stringify(requestOptions, null, '\t')}
+${body}`;
+				throw new Error(errorMessage);
 			}
-			request.end();
-		});
+		} else {
+			return responseText;
+		}
 	}
 
-	_addCookie(options) {
+	_addCookie(requestOptions) {
 		const cookie = this._cookie.serialize();
 		if (cookie.length) {
-			options.headers = options.headers || {};
-			options.headers['cookie'] = cookie;
+			requestOptions.headers = requestOptions.headers || {};
+			requestOptions.headers['cookie'] = cookie;
 		}
 	}
 

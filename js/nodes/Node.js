@@ -98,7 +98,7 @@ class Node {
 	 * @member {?string}
 	 * @readonly
 	 */
-	get userId(){
+	get userId() {
 		return this._userId;
 	}
 

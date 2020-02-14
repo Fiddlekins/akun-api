@@ -172,18 +172,18 @@ async function testPut(akun, chatId) {
 	await akun.login(credentials['username'], credentials['password']);
 	const client = await akun.join(chatId);
 	const postData = await client.post('Test post');
-	const post = await akun.getNode(postData['_id']);
-	post.b = 'edited text';
-	console.log(await akun.put('/api/node', post));
+	const data = await akun.getNode(postData['_id']);
+	data.b = 'edited text';
+	console.log(await akun.put('/api/node', { data }));
 }
 
 async function testAnonToggle(akun, chatId) {
 	await akun.login(credentials['username'], credentials['password']);
 	const client = await akun.join(chatId);
 	await akun.setAnon(true);
-	await client.post('Test anon post');
+	await client.postChat('Test anon post');
 	await akun.setAnon(false);
-	await client.post('Test non-anon post');
+	await client.postChat('Test non-anon post');
 }
 
 async function testVote(akun, pollId) {
@@ -193,7 +193,7 @@ async function testVote(akun, pollId) {
 
 async function testPost(akun, chatId) {
 	const client = await akun.join(chatId);
-	await client.post('Test post 1');
+	await client.postChat('Test post 1');
 	// console.log(await client.reply('rooply', 't2KXjRztofE5Z58uE'));
 }
 
@@ -242,3 +242,5 @@ async function teardown(akun) {
 })().catch(console.error);
 
 
+// /api/anonkun/board/live/1?contentRating%5Bteen%5D=true&contentRating%5Bnsfw%5D=true&contentRating%5Bmature%5D=true&storyStatus%5Bactive%5D=true&storyStatus%5Bfinished%5D=true&storyStatus%5Bhiatus%5D=true&sort=Latest
+// /api/anonkun/board/live/1?contentRating%5Bteen%5D=true&contentRating%5Bmature%5D=true&contentRating%5Bnsfw%5D=true&storyStatus%5Bactive%5D=true&storyStatus%5Bfinished%5D=true&storyStatus%5Bhiatus%5D=true&sort=latest
