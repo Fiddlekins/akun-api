@@ -173,7 +173,6 @@ class Core {
 			body: undefined,
 			...options
 		};
-		this._addCookie(requestOptions);
 		// console.log(requestOptions);
 		// console.log(postDataString);
 		let requestPromise;
@@ -194,6 +193,7 @@ class Core {
 				return res.text();
 			});
 		} else {
+			this._addCookie(requestOptions);
 			requestPromise = new Promise((resolve, reject) => {
 				const request = (this._protocol === 'https:' ? https : http).request(requestOptions, response => {
 					let str = '';

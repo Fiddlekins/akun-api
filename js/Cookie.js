@@ -54,7 +54,11 @@ class Cookie {
 	_serialize() {
 		const pairStrings = [];
 		for (const [key, value] of this._values) {
-			pairStrings.push(Cookie._encode(key) + '=' + Cookie._encode(value));
+			const pairString = `${Cookie._encode(key)}=${Cookie._encode(value)}`;
+			pairStrings.push(pairString);
+			if (globalThis?.document) {
+				globalThis.document.cookie = pairString;
+			}
 		}
 		this._string = pairStrings.join('; ');
 	}
