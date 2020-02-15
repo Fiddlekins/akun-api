@@ -190,7 +190,9 @@ class Core {
 			if (body) {
 				init.body = body;
 			}
-			requestPromise = globalThis.fetch(url, init).text();
+			requestPromise = globalThis.fetch(url, init).then((res) => {
+				return res.text();
+			});
 		} else {
 			requestPromise = new Promise((resolve, reject) => {
 				const request = (this._protocol === 'https:' ? https : http).request(requestOptions, response => {
