@@ -56,7 +56,7 @@ class Cookie {
 		for (const [key, value] of this._values) {
 			const pairString = `${Cookie._encode(key)}=${Cookie._encode(value)}`;
 			pairStrings.push(pairString);
-			if (globalThis?.document) {
+			if (globalThis && globalThis.document) {
 				globalThis.document.cookie = pairString;
 			}
 		}
