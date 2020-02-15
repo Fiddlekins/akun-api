@@ -174,7 +174,7 @@ class Core {
 			...options
 		};
 		this._addCookie(requestOptions);
-		console.log(requestOptions);
+		// console.log(requestOptions);
 		// console.log(postDataString);
 		let requestPromise;
 		if (globalThis.fetch) {
