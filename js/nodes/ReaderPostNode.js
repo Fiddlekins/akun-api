@@ -58,6 +58,16 @@ class ReaderPostNode extends Node {
 	}
 
 	/**
+	 * Whether the choice node is closed
+	 *
+	 * @member {boolean}
+	 * @readonly
+	 */
+	get closed() {
+		return this._internal['closed'] === 'closed';
+	}
+
+	/**
 	 * Initialises the node
 	 *
 	 * @private

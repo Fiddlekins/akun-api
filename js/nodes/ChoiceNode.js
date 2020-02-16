@@ -1,3 +1,4 @@
+import _ from 'lodash';
 import Node from './Node.js';
 
 /**
@@ -24,6 +25,7 @@ import Node from './Node.js';
  * @typedef {nodes#nodeData} AkunAPI.nodes#choice
  * @property {number} choiceId - The choice ID, aka the choiceValues array index
  * @property {number} count - The number of votes for this choice
+ * @property {number} countVerified - The number of verified votes for this choice
  * @property {string} value - What the choice actually is
  * @property {boolean} [xOut] - Whether the choice was crossed out
  * @property {string} [xOutReason] - What the reason for being crossed out is if one was given
@@ -37,7 +39,7 @@ import Node from './Node.js';
  * @returns {number}
  */
 function choiceSortFunction(a, b) {
-	return a.count - b.count;
+	return b.count - a.count;
 }
 
 /**
@@ -65,6 +67,9 @@ class ChoiceNode extends Node {
 		/** @type {?Array.<number>} */
 		this._voteCounts = null;
 
+		/** @type {?Array.<number>} */
+		this._verifiedVoteCounts = null;
+
 		/** @type {?Array.<AkunAPI.nodes#choice>} */
 		this._choices = null;
 
@@ -73,6 +78,9 @@ class ChoiceNode extends Node {
 
 		/** @type {?Array.<AkunAPI.nodes#choice>} */
 		this._choicesLosing = null;
+
+		/** @type {?number} */
+		this._voterCount = null;
 	}
 
 	/**
@@ -82,7 +90,7 @@ class ChoiceNode extends Node {
 	 * @readonly
 	 */
 	get choiceValues() {
-		return this._internal['choices'];
+		return this._internal['choices'] || [];
 	}
 
 	/**
@@ -92,7 +100,7 @@ class ChoiceNode extends Node {
 	 * @readonly
 	 */
 	get custom() {
-		return this._internal['custom'];
+		return !!this._internal['custom'];
 	}
 
 	/**
@@ -102,7 +110,7 @@ class ChoiceNode extends Node {
 	 * @readonly
 	 */
 	get multiple() {
-		return this._internal['multiple'];
+		return !!this._internal['multiple'];
 	}
 
 	/**
@@ -126,6 +134,19 @@ class ChoiceNode extends Node {
 			this._tallyVotes();
 		}
 		return this._voteCounts;
+	}
+
+	/**
+	 * A list of verified vote counts. This and the choiceValues array match choice index
+	 *
+	 * @member {Array.<number>}
+	 * @readonly
+	 */
+	get verifiedVoteCounts() {
+		if (!this._verifiedVoteCounts) {
+			this._tallyVotes();
+		}
+		return this._verifiedVoteCounts;
 	}
 
 	/**
@@ -192,6 +213,26 @@ class ChoiceNode extends Node {
 	}
 
 	/**
+	 * The number of users that have placed one or more votes
+	 *
+	 * @returns {number}
+	 */
+	get voterCount() {
+		if (_.isNull(this._voterCount)) {
+			if (this._internal.votes) {
+				if (this.multiple) {
+					this._voterCount = Object.values(this._internal.votes).filter((choiceArray) => choiceArray.length > 0).length;
+				} else {
+					this._voterCount = Object.values(this._internal.votes).filter(_.isNumber).length;
+				}
+			} else {
+				this._voterCount = 0;
+			}
+		}
+		return this._voterCount;
+	}
+
+	/**
 	 * Initialises the node
 	 *
 	 * @private
@@ -210,7 +251,7 @@ class ChoiceNode extends Node {
 	 * @returns {string}
 	 */
 	toString() {
-		return `Choice: (${this.id}) ${JSON.stringify(this._internal['choices'])}`;
+		return `Choice: (${this.id}) ${JSON.stringify(this.choiceValues)}`;
 	}
 
 	/**
@@ -219,17 +260,22 @@ class ChoiceNode extends Node {
 	 * @private
 	 */
 	_tallyVotes() {
-		const votes = this._internal['votes'];
-		this._voteCounts = new Array(this.choices.length);
+		this._voteCounts = new Array(this.choiceValues.length);
 		this._voteCounts.fill(0);
-		for (const voter of Object.keys(votes)) {
-			if (this.multiple) {
-				for (const choiceId of votes[voter]) {
-					this._incrementVote(choiceId);
+		this._verifiedVoteCounts = new Array(this.choiceValues.length);
+		this._verifiedVoteCounts.fill(0);
+		const votes = this._internal['votes'];
+		if (votes) {
+			for (const voter of Object.keys(votes)) {
+				const isVerified = this._internal['uidUser'] && this._internal['uidUser'][voter];
+				if (this.multiple) {
+					for (const choiceId of votes[voter]) {
+						this._incrementVote(choiceId, isVerified);
+					}
+				} else {
+					const choiceId = votes[voter];
+					this._incrementVote(choiceId, isVerified);
 				}
-			} else {
-				const choiceId = votes[voter];
-				this._incrementVote(choiceId);
 			}
 		}
 	}
@@ -238,13 +284,19 @@ class ChoiceNode extends Node {
 	 * Validates the given choiceId and increments the corresponding vote count
 	 *
 	 * @param {number} choiceId - The vote ID is the index of the vote in the choices array
+	 * @param {boolean} isVerified - Whether the vote is a verified vote
 	 * @private
 	 */
-	_incrementVote(choiceId) {
+	_incrementVote(choiceId, isVerified) {
 		// choiceId can be null or a number but that number isn't guaranteed to match an index of an entry in the choices array
 		// votes is a non-holey array set to match the length of choices and filled with 0
 		if (this._voteCounts[choiceId] || this._voteCounts[choiceId] === 0) {
 			this._voteCounts[choiceId]++;
+		}
+		if (isVerified) {
+			if (this._verifiedVoteCounts[choiceId] || this._verifiedVoteCounts[choiceId] === 0) {
+				this._verifiedVoteCounts[choiceId]++;
+			}
 		}
 	}
 
@@ -256,12 +308,14 @@ class ChoiceNode extends Node {
 	_sortVotes() {
 		this._choices = [];
 		const voteCounts = this.voteCounts;
+		const verifiedVoteCounts = this.verifiedVoteCounts;
 		const xOut = this._internal['xOut'];
 		const xOutReasons = this._internal['xOutReasons'];
 		for (let choiceId = 0; choiceId < voteCounts.length; choiceId++) {
 			const choice = {
 				choiceId,
 				count: voteCounts[choiceId],
+				countVerified: verifiedVoteCounts[choiceId],
 				value: this.choiceValues[choiceId]
 			};
 			if (xOut && xOut.includes(`${choiceId}`)) {
