@@ -242,5 +242,3 @@ async function teardown(akun) {
 })().catch(console.error);
 
 
-// /api/anonkun/board/live/1?contentRating%5Bteen%5D=true&contentRating%5Bnsfw%5D=true&contentRating%5Bmature%5D=true&storyStatus%5Bactive%5D=true&storyStatus%5Bfinished%5D=true&storyStatus%5Bhiatus%5D=true&sort=Latest
-// /api/anonkun/board/live/1?contentRating%5Bteen%5D=true&contentRating%5Bmature%5D=true&contentRating%5Bnsfw%5D=true&storyStatus%5Bactive%5D=true&storyStatus%5Bfinished%5D=true&storyStatus%5Bhiatus%5D=true&sort=latest

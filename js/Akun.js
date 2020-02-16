@@ -11,7 +11,18 @@ class Akun {
 		if (this._settings.connection) {
 			this.connection = new RealTimeConnection(this, this._settings.connection);
 		}
+		// Special choice node in unpublished story devoted to divining the ephemeralUserId
+		this._ephemeralUserId = this.vote('DAjqaif2XdtjF9mPD', 0).then(({ user }) => user);
 		this._clients = new Map();
+	}
+
+	/**
+	 * Special UID based on IP used to track vote requests
+	 *
+	 * @returns {Promise<string>}
+	 */
+	get ephemeralUserIdPromise() {
+		return this._ephemeralUserId;
 	}
 
 	get loggedIn() {
