@@ -12,17 +12,30 @@ class Akun {
 			this.connection = new RealTimeConnection(this, this._settings.connection);
 		}
 		// Special choice node in unpublished story devoted to divining the ephemeralUserId
-		this._ephemeralUserId = this.vote('DAjqaif2XdtjF9mPD', 0).then(({ user }) => user);
+		this._ephemeralUserId = null;
+		this._ephemeralUserIdPromise = this.vote('DAjqaif2XdtjF9mPD', 0).then(({ user }) => {
+			this._ephemeralUserId = user;
+			return user;
+		});
 		this._clients = new Map();
 	}
 
 	/**
 	 * Special UID based on IP used to track vote requests
 	 *
+	 * @returns {?string}
+	 */
+	get ephemeralUserId() {
+		return this._ephemeralUserId;
+	}
+
+	/**
+	 * Promise that resolves to ephemeralUserId
+	 *
 	 * @returns {Promise<string>}
 	 */
 	get ephemeralUserIdPromise() {
-		return this._ephemeralUserId;
+		return this._ephemeralUserIdPromise;
 	}
 
 	get loggedIn() {
