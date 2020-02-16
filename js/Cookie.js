@@ -51,6 +51,16 @@ class Cookie {
 		this._serialize();
 	}
 
+	clear() {
+		if (globalThis && globalThis.document) {
+			for (const [key] of this._values) {
+				globalThis.document.cookie = `${Cookie._encode(key)}=; Max-Age=-99999999;`;
+			}
+		}
+		this._values = new Map();
+		this._string = '';
+	}
+
 	_serialize() {
 		const pairStrings = [];
 		for (const [key, value] of this._values) {

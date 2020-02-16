@@ -79,7 +79,7 @@ class Core {
 	}
 
 	logout() {
-		this._cookie = new Cookie();
+		this._cookie.clear();
 		this._loggedIn = false;
 	}
 
