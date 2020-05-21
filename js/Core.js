@@ -176,7 +176,7 @@ class Core {
 		// console.log(requestOptions);
 		// console.log(postDataString);
 		let requestPromise;
-		if (globalThis.fetch) {
+		if (globalThis && globalThis.fetch) {
 			const { hostname, path, method, headers } = requestOptions;
 			const url = `${this._protocol}//${hostname}${path}`;
 			const init = {
