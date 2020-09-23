@@ -7,13 +7,13 @@ import RealTimeConnection from './RealTimeConnection.js';
 class Akun {
 	constructor(settings) {
 		this._settings = settings;
-		this.core = new Core({ protocol: settings.protocol, hostname: settings.hostname });
+		this.core = new Core({protocol: settings.protocol, hostname: settings.hostname});
 		if (this._settings.connection) {
 			this.connection = new RealTimeConnection(this, this._settings.connection);
 		}
 		// Special choice node in unpublished story devoted to divining the ephemeralUserId
 		this._ephemeralUserId = null;
-		this._ephemeralUserIdPromise = this.vote('DAjqaif2XdtjF9mPD', 0).then(({ user }) => {
+		this._ephemeralUserIdPromise = this.vote('DAjqaif2XdtjF9mPD', 0).then(({user}) => {
 			this._ephemeralUserId = user;
 			return user;
 		});
@@ -162,7 +162,7 @@ class Akun {
 			'trash': true,
 			'init': true
 		};
-		return this.core.post(`/api/anonkun/board/item`, { data });
+		return this.core.post(`/api/anonkun/board/item`, {data});
 	}
 
 	vote(choiceNodeId, choiceId) {
@@ -170,7 +170,7 @@ class Akun {
 			'_id': choiceNodeId,
 			'vote': choiceId
 		};
-		return this.core.post(`/api/anonkun/voteChapter`, { data });
+		return this.core.post(`/api/anonkun/voteChapter`, {data});
 	}
 
 	removeVote(choiceNodeId, choiceId) {
@@ -178,7 +178,7 @@ class Akun {
 			'_id': choiceNodeId,
 			'vote': choiceId
 		};
-		return this.core.delete(`/api/anonkun/voteChapter`, { data });
+		return this.core.delete(`/api/anonkun/voteChapter`, {data});
 	}
 
 	writeInChoice(choiceNodeId, value, storyId) {
@@ -190,7 +190,7 @@ class Akun {
 			// Site does this but omitting it seems to work anyway
 			data['r'] = [storyId];
 		}
-		return this.core.post(`/api/anonkun/customChoice`, { data });
+		return this.core.post(`/api/anonkun/customChoice`, {data});
 	}
 
 	openChoice(choiceNodeId) {
@@ -210,7 +210,7 @@ class Akun {
 			// Site does this but omitting it seems to work anyway
 			data['r'] = [storyId];
 		}
-		return this.core.post(`/api/anonkun/readerPost`, { data });
+		return this.core.post(`/api/anonkun/readerPost`, {data});
 	}
 
 	openReaderPost(readerPostNodeId) {
@@ -226,7 +226,7 @@ class Akun {
 			blockFor: chatNodeId,
 			blockFrom: storyId
 		};
-		return this.core.post(`/api/anonkun/ban`, { data, json: false });
+		return this.core.post(`/api/anonkun/ban`, {data, json: false});
 	}
 
 	unban(storyId, chatNodeId) {
@@ -234,7 +234,7 @@ class Akun {
 			blockFor: chatNodeId,
 			blockFrom: storyId
 		};
-		return this.core.delete(`/api/anonkun/ban`, { data, json: false });
+		return this.core.delete(`/api/anonkun/ban`, {data, json: false});
 	}
 
 	getBans(storyId) {
@@ -247,7 +247,7 @@ class Akun {
 			deleteFrom: storyId,
 			nid: chatNodeId
 		};
-		return this.core.delete(`/api/anonkun/node`, { data, json: false });
+		return this.core.delete(`/api/anonkun/node`, {data, json: false});
 	}
 
 	/**
@@ -265,8 +265,10 @@ class Akun {
 	 * @param {boolean} [options.storyStatus.finished=true] - Finished stories
 	 * @param {boolean} [options.storyStatus.hiatus=true] - Stories that met an untimely pause
 	 * @param {string} [options.sort] - How the results are sorted. Values can be:
-	 *   - 'Latest': "Sort by the latest activity in the story, including chat posts"
-	 *   - 'UpdatedChapter': "Sort by the latest posted chapter"
+	 *   - 'active': "Sort by the latest activity in the story, including chat posts"
+	 *   - 'chapter': "Sort by the latest posted chapter"
+	 *   - 'replies': "Sort by the most commented stories"
+	 *   - 'like': "Sort by the most liked stories"
 	 *   - 'top': "Sort by the most commented stories"
 	 *   - 'new': "Show the newest stories"
 	 * @param {string} [options.length] - Filter stories by length. Values can be:
@@ -280,6 +282,7 @@ class Akun {
 	getStories(board = 'stories', page = 1, options) {
 		const query = _.merge(
 			{
+				page,
 				contentRating: {
 					teen: true,
 					mature: true,
@@ -290,16 +293,12 @@ class Akun {
 					finished: true,
 					hiatus: true
 				},
-				sort: 'Latest',
+				sort: 'active',
 				length: 'Any'
 			},
 			options
 		);
-		if (_.isNumber(page)) {
-			return this.core.get(`/api/anonkun/board/${board}/${page}`, { query });
-		} else {
-			return this.core.get(`/api/anonkun/board/${board}`, { query });
-		}
+		return this.core.get(`/api/anonkun/board/${board}`, {query});
 	}
 
 	_openNode(nodeId) {
@@ -311,7 +310,7 @@ class Akun {
 				}
 			}
 		};
-		return this.core.post(`/api/anonkun/editChapter`, { data, json: false });
+		return this.core.post(`/api/anonkun/editChapter`, {data, json: false});
 	}
 
 	_closeNode(nodeId) {
@@ -323,7 +322,7 @@ class Akun {
 				}
 			}
 		};
-		return this.core.post(`/api/anonkun/editChapter`, { data, json: false });
+		return this.core.post(`/api/anonkun/editChapter`, {data, json: false});
 	}
 }
 
