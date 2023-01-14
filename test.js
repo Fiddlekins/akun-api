@@ -107,13 +107,13 @@ async function testStory(akun, storyId) {
 	});
 	client.storyThread.on('subscriptionSucceeded', onSubscriptionSucceeded);
 
-	// const resTestPost1 = await client.post('Test post 1');
+	// const resTestPost1 = await client.postChat('Test post 1');
 	// console.log(`post response: ${resTestPost1}`);
 
 	const resLogin = await akun.login(credentials['username'], credentials['password']);
 	console.log(`Logged in as ${resLogin['username']}!`);
 
-	// const resTestPost2 = await client.post('Test post 2');
+	// const resTestPost2 = await client.postChat('Test post 2');
 	// console.log(`post response: ${resTestPost2}`);
 
 	// console.log(client.latestChapter());
@@ -125,7 +125,7 @@ async function testStory(akun, storyId) {
 	// });
 
 	return new Promise(res => {
-		client.storyThread.on('chat', (node) => {
+		client.chatThread.on('chat', (node) => {
 			if (node.body === 'exit') {
 				res();
 			}
@@ -174,7 +174,7 @@ async function testPut(akun, chatId) {
 	const postData = await client.post('Test post');
 	const data = await akun.getNode(postData['_id']);
 	data.b = 'edited text';
-	console.log(await akun.put('/api/node', { data }));
+	console.log(await akun.put('/api/node', {data}));
 }
 
 async function testAnonToggle(akun, chatId) {
@@ -201,21 +201,65 @@ async function testBan(akun) {
 	let res;
 	res = await akun.login(credentials['username'], credentials['password']);
 	console.log(res);
-	res = await akun.unban('iRoYFFCDCZnB2QvEq', '53zAELYaC8RkkMpcn');
+	res = await akun.ban('iRoYFFCDCZnB2QvEq', '53zAELYaC8RkkMpcn');
 	console.log(res);
 	res = await akun.unban('iRoYFFCDCZnB2QvEq', 'B5cqvTk3kMgRNPesr');
 	console.log(res);
+}
+
+async function testPollOpenClose(akun) {
+	await akun.login(credentials['username'], credentials['password']);
+
+	while (true) {
+		console.log(await akun.closeChoice('58BfMER3GZg48LbYm'));
+		await setTimeoutPromise(1000);
+		console.log(await akun.openChoice('58BfMER3GZg48LbYm'));
+		await setTimeoutPromise(1000);
+	}
+}
+
+async function testPollChoiceRemoval(akun) {
+	let res;
+	res = await akun.login(credentials['username'], credentials['password']);
+	console.log(res);
+	const client = await akun.join('vhHhMfskRnNDbxwzo');
+	client.storyThread.on('choice', (node) => {
+		onChoice(akun, client, node);
+		for (let choiceId = 0; choiceId < node.choiceValues.length; choiceId++) {
+			if (node.choiceValues[choiceId] === 'test') {
+				akun.removeChoiceNodeChoice(node.id, choiceId).then(res => console.log(res))
+			}
+		}
+	});
+	client.storyThread.on('choiceUpdated', (node) => {
+		onChoiceUpdated(akun, client, node);
+		for (let choiceId = 0; choiceId < node.choiceValues.length; choiceId++) {
+			if (node.choiceValues[choiceId] === 'test') {
+				akun.removeChoiceNodeChoice(node.id, choiceId, 'sample reason').then(res => console.log(res))
+			}
+		}
+	});
+
+	return new Promise(res => {
+		client.chatThread.on('chat', (node) => {
+			if (node.body === 'exit') {
+				res();
+			}
+		});
+	})
 }
 
 async function runTests(akun) {
 	// await testAnonToggle(akun, 'vhHhMfskRnNDbxwzo');
 	// await testPost(akun, 'vhHhMfskRnNDbxwzo');
 	await testStory(akun, 'vhHhMfskRnNDbxwzo');
-	// await testChat(akun, 'oQ2fkvRS4nxjLfSmA');
+ 	// await testChat(akun, 'oQ2fkvRS4nxjLfSmA');
 	// await testChat(akun, 'oWC3WhFDMXqZkAG69');
 	// await testPut(akun, 'vhHhMfskRnNDbxwzo');
 	// await testVote(akun, 'TziTddJsppEfr82nh');
+	// await testPollOpenClose(akun);
 	// await testBan(akun);
+	// await testPollChoiceRemoval(akun);
 }
 
 async function setup(withRealtime = true) {

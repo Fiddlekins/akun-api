@@ -221,6 +221,22 @@ class Akun {
 		return this._closeNode(readerPostNodeId);
 	}
 
+	removeChoiceNodeChoice(choiceNodeId, choiceId, reason) {
+		const data = {
+			'_id': choiceNodeId,
+			'update': {
+				'$addToSet': {
+					'xOut': choiceId
+				},
+				'$set': {
+					[`choices.${choiceId}`]: 'permanentlyRemoved',
+					[`xOutReasons.${choiceId}`]: reason
+				}
+			}
+		};
+		return this.core.post(`/api/anonkun/editChapter`, {data: data, json: false});
+	}
+
 	ban(storyId, chatNodeId) {
 		const data = {
 			blockFor: chatNodeId,
