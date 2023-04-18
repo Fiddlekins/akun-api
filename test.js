@@ -130,7 +130,7 @@ async function testStory(akun, storyId) {
 				res();
 			}
 		});
-	})
+	});
 }
 
 async function testChat(akun, chatId) {
@@ -165,7 +165,7 @@ async function testChat(akun, chatId) {
 				res();
 			}
 		});
-	})
+	});
 }
 
 async function testPut(akun, chatId) {
@@ -227,7 +227,7 @@ async function testPollChoiceRemoval(akun) {
 		onChoice(akun, client, node);
 		for (let choiceId = 0; choiceId < node.choiceValues.length; choiceId++) {
 			if (node.choiceValues[choiceId] === 'test') {
-				akun.removeChoiceNodeChoice(node.id, choiceId).then(res => console.log(res))
+				akun.removeChoiceNodeChoice(node.id, choiceId).then(res => console.log(res));
 			}
 		}
 	});
@@ -235,7 +235,7 @@ async function testPollChoiceRemoval(akun) {
 		onChoiceUpdated(akun, client, node);
 		for (let choiceId = 0; choiceId < node.choiceValues.length; choiceId++) {
 			if (node.choiceValues[choiceId] === 'test') {
-				akun.removeChoiceNodeChoice(node.id, choiceId, 'sample reason').then(res => console.log(res))
+				akun.removeChoiceNodeChoice(node.id, choiceId, 'sample reason').then(res => console.log(res));
 			}
 		}
 	});
@@ -246,20 +246,28 @@ async function testPollChoiceRemoval(akun) {
 				res();
 			}
 		});
-	})
+	});
+}
+
+async function testGetStories(akun) {
+	const {stories} = await akun.getStories('stories', 1, {sort: 'new'});
+	stories.forEach((story, i) => {
+		console.log(i, `${story.t} by ${story.u[0].n}`);
+	});
 }
 
 async function runTests(akun) {
 	// await testAnonToggle(akun, 'vhHhMfskRnNDbxwzo');
 	// await testPost(akun, 'vhHhMfskRnNDbxwzo');
 	await testStory(akun, 'vhHhMfskRnNDbxwzo');
- 	// await testChat(akun, 'oQ2fkvRS4nxjLfSmA');
+	// await testChat(akun, 'oQ2fkvRS4nxjLfSmA');
 	// await testChat(akun, 'oWC3WhFDMXqZkAG69');
 	// await testPut(akun, 'vhHhMfskRnNDbxwzo');
 	// await testVote(akun, 'TziTddJsppEfr82nh');
 	// await testPollOpenClose(akun);
 	// await testBan(akun);
 	// await testPollChoiceRemoval(akun);
+	// await testGetStories(akun);
 }
 
 async function setup(withRealtime = true) {

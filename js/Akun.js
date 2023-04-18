@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import {ChatClient, StoryClient} from './clients/index.js'
+import {ChatClient, StoryClient} from './clients/index.js';
 import Core from './Core.js';
 import {ChapterNode, ChatNode, ChoiceNode, ReaderPostNode} from './nodes/index.js';
 import RealTimeConnection from './RealTimeConnection.js';
@@ -276,16 +276,22 @@ class Akun {
 	 * @param {boolean} [options.contentRating.teen=true] - Teen age rating
 	 * @param {boolean} [options.contentRating.mature=true] - Mature age rating
 	 * @param {boolean} [options.contentRating.nsfw=true] - NSFW
+	 * @param {boolean} [options.contentRating.unrated=true] - Unrated
 	 * @param {Object} [options.storyStatus] - Which story status categories should appear in the results
 	 * @param {boolean} [options.storyStatus.active=true] - On-going stories
 	 * @param {boolean} [options.storyStatus.finished=true] - Finished stories
 	 * @param {boolean} [options.storyStatus.hiatus=true] - Stories that met an untimely pause
+	 * @param {Object} [options.rInteract] - Which story status categories should appear in the results. If all are false, then this filter will be disabled
+	 * @param {boolean} [options.rInteract.none=true] - The classic linear story
+	 * @param {boolean} [options.rInteract.light=true] - There are small alternative routes but only the main story is considered important
+	 * @param {boolean} [options.rInteract.medium=true] - There are multiple important routes and multiple endings
+	 * @param {boolean} [options.rInteract.heavy=true] - There are diverse endings and many options. This story involves programming and is game-like
 	 * @param {string} [options.sort] - How the results are sorted. Values can be:
 	 *   - 'active': "Sort by the latest activity in the story, including chat posts"
+	 *   - 'hot': "Sort by the most upvoted in 24 hours"
 	 *   - 'chapter': "Sort by the latest posted chapter"
 	 *   - 'replies': "Sort by the most commented stories"
 	 *   - 'like': "Sort by the most liked stories"
-	 *   - 'top': "Sort by the most commented stories"
 	 *   - 'new': "Show the newest stories"
 	 * @param {string} [options.length] - Filter stories by length. Values can be:
 	 *   - 'Any': No filtering
@@ -302,12 +308,19 @@ class Akun {
 				contentRating: {
 					teen: true,
 					mature: true,
-					nsfw: true
+					nsfw: true,
+					unrated: true
 				},
 				storyStatus: {
 					active: true,
 					finished: true,
 					hiatus: true
+				},
+				rInteract: {
+					none: true,
+					light: true,
+					medium: true,
+					heavy: true
 				},
 				sort: 'active',
 				length: 'Any'
