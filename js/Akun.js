@@ -7,7 +7,11 @@ import RealTimeConnection from './RealTimeConnection.js';
 class Akun {
 	constructor(settings) {
 		this._settings = settings;
-		this.core = new Core({protocol: settings.protocol, hostname: settings.hostname});
+		this.core = new Core({
+			protocol: settings.protocol,
+			hostname: settings.hostname,
+			inBrowser: settings.inBrowser
+		});
 		if (this._settings.connection) {
 			this.connection = new RealTimeConnection(this, this._settings.connection);
 		}

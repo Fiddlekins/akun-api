@@ -4,9 +4,10 @@ import qs from 'qs';
 import Cookie from './Cookie.js';
 
 class Core {
-	constructor({ protocol, hostname }) {
+	constructor({ protocol, hostname, inBrowser }) {
 		this._protocol = protocol || 'https:';
 		this._hostname = hostname;
+		this._inBrowser = inBrowser || false;
 		this._cookie = new Cookie();
 		this._loginData = null;
 		this._siteSettings = null;
@@ -176,7 +177,7 @@ class Core {
 		// console.log(requestOptions);
 		// console.log(postDataString);
 		let requestPromise;
-		if (globalThis && globalThis.fetch) {
+		if (this._inBrowser) {
 			const { hostname, path, method, headers } = requestOptions;
 			const url = `${this._protocol}//${hostname}${path}`;
 			const init = {
