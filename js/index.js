@@ -2,6 +2,6 @@
  * @namespace AkunAPI
  */
 
-import Akun from './js/Akun.js';
+import Akun from './Akun.js';
 
 export default Akun;
